@@ -1,0 +1,1 @@
+ALTER TABLE `project_wiki` ADD `model` text DEFAULT 'claude-opus-4-7' NOT NULL;

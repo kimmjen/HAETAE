@@ -1,0 +1,22 @@
+{
+  "name": "haetae",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "dev": "concurrently -n web,server,py -c blue,green,yellow \"pnpm --filter haetae-web dev\" \"pnpm --filter haetae-server dev\" \"pnpm --filter haetae-notebooklm dev\"",
+    "build": "pnpm --filter haetae-web build",
+    "start": "NODE_ENV=production pnpm --filter haetae-server start",
+    "start:build": "pnpm build && pnpm start",
+    "lint": "pnpm --recursive lint",
+    "test": "pnpm --recursive --aggregate-output test",
+    "clean": "pnpm --recursive clean",
+    "postinstall": "node scripts/fix-node-pty-perms.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "~5.8.2"
+  },
+  "packageManager": "pnpm@10.33.2"
+}

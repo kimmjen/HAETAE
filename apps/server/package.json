@@ -1,0 +1,38 @@
+{
+  "name": "haetae-server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "mcp": "tsx src/mcp/index.ts",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:generate": "drizzle-kit generate",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@fastify/http-proxy": "^11.5.0",
+    "@fastify/static": "^9.1.3",
+    "@fastify/websocket": "^11.2.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "better-sqlite3": "^12.9.0",
+    "drizzle-orm": "^0.45.2",
+    "env-paths": "^4.0.0",
+    "fastify": "^5.8.5",
+    "gray-matter": "^4.0.3",
+    "node-pty": "^1.1.0",
+    "tsx": "^4.21.0",
+    "zod": "^4.4.2"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.14.0",
+    "drizzle-kit": "^0.31.10",
+    "typescript": "~5.8.2",
+    "vitest": "^4.1.5"
+  }
+}

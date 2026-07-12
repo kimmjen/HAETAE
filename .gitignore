@@ -1,0 +1,46 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Node
+node_modules/
+.pnpm-store/
+.yarn/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+coverage/
+
+# Env
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs / cache
+*.log
+.cache/
+.turbo/
+
+# Backups
+*.bak
+.vite/
+
+# Claude Code per-project state — should never be committed.
+# settings.local.json accumulates absolute paths and bash permission rules
+# that are specific to the developer's machine.
+.claude/
+.haetae/

@@ -1,0 +1,10 @@
+packages:
+  - "apps/*"
+
+# Native modules that need to run their install scripts.
+# better-sqlite3 compiles a Node addon; esbuild ships prebuilt binaries that
+# need to be made executable; node-pty compiles a PTY addon (Phase 3).
+allowBuilds:
+  better-sqlite3: true
+  esbuild: true
+  node-pty: true

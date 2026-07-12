@@ -1,0 +1,254 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap");
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+/* Primitive layer — raw values, never used directly by components. */
+:root {
+  --bb-blue: #003399;
+  --bb-blue-hover: #002288;
+  --bb-red: #cc0000;
+  --bb-amber: #ffcc00;
+  --bb-green: #2d8a5f;
+
+  --hanji-0: #ffffff;
+  --hanji-50: #fcfcfc;
+  --hanji-100: #f2f2f2;
+  --hanji-200: #ebebeb;
+  --hanji-300: #d4d4d4;
+  --hanji-500: #999999;
+  --hanji-700: #666666;
+  --hanji-900: #000000;
+
+  --night-0: #0d0d0e;
+  --night-50: #141416;
+  --night-100: #161618;
+  --night-200: #1a1a1d;
+  --night-300: #232328;
+  --night-400: #2a2a2e;
+  --night-500: #3a3a3f;
+  --night-700: #6b6b71;
+  --night-800: #a3a3a8;
+  --night-900: #f5f5f1;
+
+  --night-accent: #2563a8;
+  --night-accent-hover: #2d6fb8;
+  --night-danger: #b8364a;
+  --night-warning: #c89b3c;
+
+  /* Bloomberg-tone ANSI 16 (ADR 0008). red/green/yellow/blue 4 의미색은
+     채도를 살리고 나머지는 muted. light·dark 모두 같은 픽셀이며 가독성은
+     terminal-bg/fg semantic 토큰이 따라가는 식으로 보장한다. */
+  --bloomberg-ansi-black:           #1a1a1a;
+  --bloomberg-ansi-red:             #c83232;
+  --bloomberg-ansi-green:           #4a8c4a;
+  --bloomberg-ansi-yellow:          #c8a040;
+  --bloomberg-ansi-blue:            #4a7ec8;
+  --bloomberg-ansi-magenta:         #8060a0;
+  --bloomberg-ansi-cyan:            #4090a0;
+  --bloomberg-ansi-white:           #c8c8c8;
+  --bloomberg-ansi-bright-black:    #4a4a4a;
+  --bloomberg-ansi-bright-red:      #e85050;
+  --bloomberg-ansi-bright-green:    #6aaf6a;
+  --bloomberg-ansi-bright-yellow:   #e8c060;
+  --bloomberg-ansi-bright-blue:     #6a9be8;
+  --bloomberg-ansi-bright-magenta:  #a080c0;
+  --bloomberg-ansi-bright-cyan:     #60b0c0;
+  --bloomberg-ansi-bright-white:    #e8e8e8;
+}
+
+/* Semantic layer — light theme (default). */
+:root {
+  --app-bg-primary: var(--hanji-0);
+  --app-bg-secondary: var(--hanji-100);
+  --app-bg-elevated: var(--hanji-50);
+  --app-bg-inverse: var(--hanji-900);
+  --app-bg-zebra: var(--hanji-50);
+  --app-bg-hover: var(--hanji-200);
+  --app-bg-overlay: rgba(13, 13, 14, 0.5);
+
+  --app-text-main: var(--hanji-900);
+  --app-text-muted: var(--hanji-700);
+  --app-text-subtle: var(--hanji-500);
+  --app-text-on-inverse: var(--hanji-0);
+  --app-text-on-accent: var(--hanji-0);
+
+  --app-border-main: var(--hanji-900);
+  --app-border-subtle: var(--hanji-300);
+
+  --app-accent: var(--bb-blue);
+  --app-accent-hover: var(--bb-blue-hover);
+  --app-accent-on-inverse: var(--night-accent-hover);
+  --app-danger: var(--bb-red);
+  --app-warning: var(--bb-amber);
+  --app-warning-on-inverse: var(--bb-amber);
+  --app-success: var(--bb-green);
+  --app-success-on-inverse: #4ec38a;
+
+  /* Terminal — bg/fg follow theme; ANSI palette doesn't. */
+  --app-terminal-bg: var(--app-bg-primary);
+  --app-terminal-fg: var(--app-text-main);
+  --app-terminal-cursor: var(--app-accent);
+  --app-terminal-selection: var(--app-bg-hover);
+
+  --app-ansi-0:  var(--bloomberg-ansi-black);
+  --app-ansi-1:  var(--bloomberg-ansi-red);
+  --app-ansi-2:  var(--bloomberg-ansi-green);
+  --app-ansi-3:  var(--bloomberg-ansi-yellow);
+  --app-ansi-4:  var(--bloomberg-ansi-blue);
+  --app-ansi-5:  var(--bloomberg-ansi-magenta);
+  --app-ansi-6:  var(--bloomberg-ansi-cyan);
+  --app-ansi-7:  var(--bloomberg-ansi-white);
+  --app-ansi-8:  var(--bloomberg-ansi-bright-black);
+  --app-ansi-9:  var(--bloomberg-ansi-bright-red);
+  --app-ansi-10: var(--bloomberg-ansi-bright-green);
+  --app-ansi-11: var(--bloomberg-ansi-bright-yellow);
+  --app-ansi-12: var(--bloomberg-ansi-bright-blue);
+  --app-ansi-13: var(--bloomberg-ansi-bright-magenta);
+  --app-ansi-14: var(--bloomberg-ansi-bright-cyan);
+  --app-ansi-15: var(--bloomberg-ansi-bright-white);
+}
+
+/* Semantic layer — dark theme override. */
+.dark {
+  --app-bg-primary: var(--night-0);
+  --app-bg-secondary: var(--night-50);
+  --app-bg-elevated: var(--night-200);
+  --app-bg-inverse: var(--night-900);
+  --app-bg-zebra: var(--night-100);
+  --app-bg-hover: var(--night-300);
+  --app-bg-overlay: rgba(0, 0, 0, 0.7);
+
+  --app-text-main: var(--night-900);
+  --app-text-muted: var(--night-800);
+  --app-text-subtle: var(--night-700);
+  --app-text-on-inverse: var(--night-0);
+  --app-text-on-accent: var(--hanji-0);
+
+  --app-border-main: var(--night-500);
+  --app-border-subtle: var(--night-400);
+
+  --app-accent: var(--night-accent);
+  --app-accent-hover: var(--night-accent-hover);
+  --app-accent-on-inverse: var(--bb-blue);
+  --app-danger: var(--night-danger);
+  --app-warning: var(--night-warning);
+  --app-warning-on-inverse: var(--night-warning);
+  --app-success: var(--bb-green);
+  --app-success-on-inverse: var(--bb-green);
+}
+
+/* Theme bridge — Tailwind utilities resolve to the semantic vars above. */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-bg-primary: var(--app-bg-primary);
+  --color-bg-secondary: var(--app-bg-secondary);
+  --color-bg-elevated: var(--app-bg-elevated);
+  --color-bg-inverse: var(--app-bg-inverse);
+  --color-bg-zebra: var(--app-bg-zebra);
+  --color-bg-hover: var(--app-bg-hover);
+  --color-bg-overlay: var(--app-bg-overlay);
+
+  --color-text-main: var(--app-text-main);
+  --color-text-muted: var(--app-text-muted);
+  --color-text-subtle: var(--app-text-subtle);
+  --color-text-on-inverse: var(--app-text-on-inverse);
+  --color-text-on-accent: var(--app-text-on-accent);
+
+  --color-border-main: var(--app-border-main);
+  --color-border-subtle: var(--app-border-subtle);
+
+  --color-accent: var(--app-accent);
+  --color-accent-hover: var(--app-accent-hover);
+  --color-accent-on-inverse: var(--app-accent-on-inverse);
+  --color-danger: var(--app-danger);
+  --color-warning: var(--app-warning);
+  --color-warning-on-inverse: var(--app-warning-on-inverse);
+  --color-success: var(--app-success);
+  --color-success-on-inverse: var(--app-success-on-inverse);
+
+  --color-terminal-bg: var(--app-terminal-bg);
+  --color-terminal-fg: var(--app-terminal-fg);
+  --color-terminal-cursor: var(--app-terminal-cursor);
+  --color-terminal-selection: var(--app-terminal-selection);
+
+  --color-ansi-0:  var(--app-ansi-0);
+  --color-ansi-1:  var(--app-ansi-1);
+  --color-ansi-2:  var(--app-ansi-2);
+  --color-ansi-3:  var(--app-ansi-3);
+  --color-ansi-4:  var(--app-ansi-4);
+  --color-ansi-5:  var(--app-ansi-5);
+  --color-ansi-6:  var(--app-ansi-6);
+  --color-ansi-7:  var(--app-ansi-7);
+  --color-ansi-8:  var(--app-ansi-8);
+  --color-ansi-9:  var(--app-ansi-9);
+  --color-ansi-10: var(--app-ansi-10);
+  --color-ansi-11: var(--app-ansi-11);
+  --color-ansi-12: var(--app-ansi-12);
+  --color-ansi-13: var(--app-ansi-13);
+  --color-ansi-14: var(--app-ansi-14);
+  --color-ansi-15: var(--app-ansi-15);
+
+  --radius-none: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+}
+
+/* Component layer — sizing/spacing tokens. */
+:root {
+  --header-height: 3rem;
+  --footer-height: 1.5rem;
+  --sidebar-width: 13rem;
+
+  --button-height-sm: 1.75rem;
+  --button-height-md: 2rem;
+
+  --card-padding-sm: 0.75rem;
+  --card-padding-md: 1rem;
+}
+
+@layer base {
+  body {
+    @apply bg-bg-primary text-text-main antialiased font-sans selection:bg-accent/15;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-bold tracking-tighter uppercase text-text-main;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-accent ring-offset-1 ring-offset-bg-primary;
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--app-border-subtle);
+  transition: background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--app-text-subtle);
+}
