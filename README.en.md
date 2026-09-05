@@ -66,25 +66,29 @@ bash scripts/bootstrap.sh
 pnpm dev
 ```
 
-`bootstrap.sh` requires [mise](https://mise.jdx.dev) (`curl https://mise.run | sh`). It auto-installs the Node + pnpm versions pinned in `.tool-versions` and the workspace dependencies.
+**There are only two hard requirements** — [mise](https://mise.jdx.dev) (`curl https://mise.run | sh`) and bash. `bootstrap.sh` installs the Node + pnpm versions pinned in `.tool-versions` plus the workspace dependencies. Everything else is optional; without it, only that one screen degrades.
 
-### Optional dependencies
+### Supported platforms
 
-Haetae itself runs with the four lines above, but the following capabilities only light up when the **`claude` CLI is on PATH**:
-
-| Feature | Depends on |
+| OS | Status |
 |---|---|
-| Sidebar ACCOUNT (subscription / email) | `claude auth status --json` |
-| Rolling Windows real 5h / 7d utilization + reset time | Claude OAuth creds (macOS Keychain / Linux·Windows `~/.claude/.credentials.json`, #166) + **opt-in flag** `HAETAE_USE_OAUTH_LIMITS=true` |
-| Per-project sessions / memory / drill-down | `~/.claude/projects/<encoded>/` data (run `claude` at least once) |
-| Second brain (wiki / notes / recall / Q&A) | `claude --print` subprocess + a Claude subscription (no separate API key) |
+| **macOS** | Primary development platform, covered by CI. Everything, including real usage limits via the Keychain |
+| **Linux** | Covered by CI (ubuntu-latest). OAuth creds are read from `~/.claude/.credentials.json` instead of the Keychain (#166) |
+| **Windows** | **Unsupported.** The code does branch for it (PTY → `powershell.exe`, creds → file), but `node-pty`'s native build is finicky there, so Windows is absent from the CI matrix and has never been verified. `bootstrap.sh` is bash, so you would need WSL |
 
-Without the CLI / when not logged in, those panels gracefully render an empty state. Everything else (Local Usage / Watching / Guarding / Working) keeps working.
+### Optional dependencies — and what you lose without them
 
-**Other optional integrations** (independent of the `claude` CLI):
+| Feature | Needs | Without it |
+|---|---|---|
+| Overview · Local Usage · Guarding · Working | — | Always works (the baseline) |
+| Sidebar ACCOUNT (subscription / email) | `claude auth status --json` | Badge hidden |
+| Per-project sessions / memory / drill-down | `~/.claude/projects/<encoded>/` data (run `claude` at least once) | Empty lists |
+| Rolling Windows real 5h / 7d utilization + reset time | Claude OAuth creds + **opt-in** `HAETAE_USE_OAUTH_LIMITS=true` | Falls back to your thresholds from Settings |
+| Second brain (wiki / notes / recall / Q&A) | A logged-in `claude` CLI (invoked as a `claude --print` subprocess — no separate API key) | Brain generation unavailable; the rest is unaffected |
+| API Cost / Unified | `ANTHROPIC_ADMIN_KEY` in `apps/server/.env.local` | Those pages render a locked state |
+| Research (NotebookLM) | The Python sidecar (`bootstrap.sh` installs its venv + Playwright/chromium) + a Google login via **Settings → NotebookLM** | Research tab degrades |
 
-- **API Cost / Unified** — an Anthropic Admin API key in `apps/server/.env.local` (`ANTHROPIC_ADMIN_KEY`). Absent → those pages render a locked state.
-- **NotebookLM (Research tab)** — the Python sidecar (`apps/notebooklm`; `bootstrap.sh` installs its venv + Playwright/chromium). First run: authenticate via **Settings → NotebookLM** (opens a browser Google login). Absent → the Research tab degrades.
+In other words: **without the `claude` CLI this still works fully as a usage dashboard**; adding the CLI turns on the brain and the real limits.
 
 Detailed setup sequence: [`docs/portability.md`](./docs/portability.md) (Korean).
 

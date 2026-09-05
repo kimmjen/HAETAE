@@ -66,25 +66,29 @@ bash scripts/bootstrap.sh
 pnpm dev
 ```
 
-`bootstrap.sh` 는 [mise](https://mise.jdx.dev) 가 필요합니다 (`curl https://mise.run | sh`). `.tool-versions` 에 핀된 Node·pnpm 버전을 자동 설치하고 워크스페이스 의존성까지 설치합니다.
+**하드 의존은 이 둘뿐입니다** — [mise](https://mise.jdx.dev) (`curl https://mise.run | sh`) 와 bash. `bootstrap.sh` 가 `.tool-versions` 에 핀된 Node·pnpm 을 설치하고 워크스페이스 의존성까지 깝니다. 나머지는 전부 선택이고, 없으면 해당 화면만 degrade 합니다.
 
-### 선택적 의존성
+### 지원 OS
 
-HAETAE 자체는 위 4줄로 동작하지만, **`claude` CLI 가 PATH 에 있을 때만** 활성화되는 기능들이 있습니다:
-
-| 기능 | 의존 |
+| OS | 상태 |
 |---|---|
-| 사이드바 ACCOUNT (구독 등급 / email) | `claude auth status --json` |
-| Rolling Windows 의 진짜 5h / 7d 한도 % + reset 시각 | Claude OAuth 자격증명 (macOS Keychain / Linux·Windows `~/.claude/.credentials.json`, #166) + **opt-in flag** `HAETAE_USE_OAUTH_LIMITS=true` |
-| 프로젝트별 세션 / 메모리 / drill-down | `~/.claude/projects/<encoded>/` 데이터 (claude 한 번 이상 실행 필요) |
-| 2차 뇌 (위키 / 노트 / 회상 / Q&A) | `claude --print` 서브프로세스 + Claude 구독 (별도 API 키 불필요) |
+| **macOS** | 주 개발 플랫폼. CI 검증. Keychain 기반 실 한도 포함 전 기능 |
+| **Linux** | CI 검증(ubuntu-latest). OAuth 자격증명은 Keychain 대신 `~/.claude/.credentials.json` 에서 읽습니다 (#166) |
+| **Windows** | **미지원.** 코드에 분기는 있으나(PTY → `powershell.exe`, 자격증명 → 파일) `node-pty` 네이티브 빌드가 까다로워 CI 매트릭스에서 빠져 있고 검증된 적이 없습니다. `bootstrap.sh` 도 bash 라 WSL 이 필요합니다 |
 
-CLI 가 없거나 미로그인이면 위 기능들은 graceful 하게 빈 상태를 보이고, 나머지 기능 (Local Usage / Watching / Guarding / Working) 은 정상 동작.
+### 선택적 의존성 — 없으면 어떻게 되나
 
-**그 외 선택 연동** (`claude` CLI 와 무관):
+| 기능 | 필요한 것 | 없으면 |
+|---|---|---|
+| Overview · Local Usage · Guarding · Working | — | 항상 동작 (기본 기능) |
+| 사이드바 ACCOUNT (구독 등급 / email) | `claude auth status --json` | 배지 미표시 |
+| 프로젝트별 세션 / 메모리 / drill-down | `~/.claude/projects/<encoded>/` 데이터 (`claude` 를 한 번 이상 실행) | 빈 목록 |
+| Rolling Windows 의 진짜 5h / 7d 한도 % + reset 시각 | Claude OAuth 자격증명 + **opt-in** `HAETAE_USE_OAUTH_LIMITS=true` | Settings 의 사용자 임계치로 fallback |
+| 2차 뇌 (위키 / 노트 / 회상 / Q&A) | `claude` CLI 로그인 (`claude --print` 서브프로세스로 호출 — 별도 API 키 불필요) | 두뇌 생성 불가, 나머지는 정상 |
+| API Cost / Unified | `apps/server/.env.local` 의 `ANTHROPIC_ADMIN_KEY` | 해당 페이지 잠금 상태 |
+| Research (NotebookLM) | Python 사이드카 (`bootstrap.sh` 가 venv + Playwright/chromium 설치) + **Settings → NotebookLM** 에서 구글 로그인 | Research 탭 degrade |
 
-- **API Cost / Unified** — `apps/server/.env.local` 의 Anthropic Admin API 키(`ANTHROPIC_ADMIN_KEY`). 없으면 해당 페이지는 잠금 상태.
-- **NotebookLM (Research 탭)** — Python 사이드카(`apps/notebooklm`; `bootstrap.sh` 가 venv + Playwright/chromium 설치). 최초엔 **Settings → NotebookLM** 에서 재인증(브라우저 구글 로그인). 없으면 Research 탭 degrade.
+즉 **`claude` CLI 없이도 사용량 대시보드로는 온전히 동작**하고, CLI 를 붙이면 두뇌와 실 한도가 켜집니다.
 
 상세 setup 시퀀스는 [docs/portability.md](./docs/portability.md).
 
