@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   assembleFile,
   buildSkillPath,
-  isValidSkillName,
-  sanitizeSkillName,
 } from "./skill-template";
 
 describe("assembleFile", () => {
@@ -74,38 +72,9 @@ describe("assembleFile", () => {
     expect(result).not.toMatch(/\n\s*\n\s*\n/);
   });
 });
-
-describe("sanitizeSkillName", () => {
-  it("lowers, replaces spaces, strips edges", () => {
-    expect(sanitizeSkillName("  My Cool Skill  ")).toBe("my-cool-skill");
-  });
-
-  it("strips trailing .md", () => {
-    expect(sanitizeSkillName("commit-helper.md")).toBe("commit-helper");
-  });
-
-  it("collapses non-allowed runs to a single dash", () => {
-    expect(sanitizeSkillName("a@@@b___c")).toBe("a-b___c");
-  });
-});
-
-describe("isValidSkillName", () => {
-  it("accepts the canonical pattern", () => {
-    expect(isValidSkillName("commit-helper")).toBe(true);
-    expect(isValidSkillName("a_b_c")).toBe(true);
-    expect(isValidSkillName("v1")).toBe(true);
-  });
-
-  it("rejects empty / uppercase / spaces / dots", () => {
-    expect(isValidSkillName("")).toBe(false);
-    expect(isValidSkillName("Foo")).toBe(false);
-    expect(isValidSkillName("foo bar")).toBe(false);
-    expect(isValidSkillName("foo.md")).toBe(false);
-  });
-});
-
 describe("buildSkillPath", () => {
   it("joins directory + .md", () => {
     expect(buildSkillPath("skills", "commit-helper")).toBe("skills/commit-helper.md");
   });
 });
+

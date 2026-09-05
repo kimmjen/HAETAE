@@ -61,6 +61,32 @@ describe("capWikiForInjection", () => {
     expect(capWikiForInjection(WIKI, 8000)).not.toContain("요약본");
   });
 
+  it("새 섹션 우선순위 (#384): 아키텍처는 주요 기능보다 먼저 살아남는다", () => {
+    // 문서 순서상 주요 기능(rank 5)이 아키텍처보다 앞 — 랭크 엔트리가 없으면
+    // 둘 다 rank 5 동점 + idx 순으로 주요 기능이 이겨서 이 테스트가 깨진다.
+    const wiki = [
+      "# P",
+      section("개요 / Overview", 100),
+      section("주요 기능 / Key Features", 400),
+      section("아키텍처 / Architecture", 400),
+    ].join("\n");
+    const out = capWikiForInjection(wiki, 650);
+    expect(out).toContain("아키텍처");
+    expect(out).not.toContain("주요 기능");
+  });
+
+  it("새 섹션 우선순위 (#384): 트러블슈팅은 주요 기능보다 먼저 떨어진다", () => {
+    const wiki = [
+      "# P",
+      section("개요 / Overview", 100),
+      section("트러블슈팅 이력 / Troubleshooting", 400),
+      section("주요 기능 / Key Features", 400),
+    ].join("\n");
+    const out = capWikiForInjection(wiki, 650);
+    expect(out).toContain("주요 기능");
+    expect(out).not.toContain("트러블슈팅");
+  });
+
   it("falls back to truncated content when there are no sections", () => {
     const noSections = "# Title\n" + "y".repeat(5000);
     const out = capWikiForInjection(noSections, 1000);

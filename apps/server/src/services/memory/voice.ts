@@ -5,7 +5,7 @@ import { getDb, type Db } from "../../db";
 import { sessionMessages, userProfile } from "../../db/schema";
 import { getClaudeHome } from "../claude-fs/path";
 import { saveBackup } from "../claude-fs/backup";
-import { callClaude, type ClaudeModel } from "./claude-cli";
+import { callClaude, DEFAULT_MODEL, type ClaudeModel } from "./claude-cli";
 
 const SOURCE_BUDGET = 60_000; // chars of the user's own messages fed to the agent
 const PER_MSG_CAP = 1_500; // truncate each message so the budget samples MANY, not a few huge pastes
@@ -112,7 +112,7 @@ export function getUserProfile(db: Db = getDb()): VoiceResult | null {
 
 /** Synthesize (or regenerate) the user profile from their recent messages. */
 export async function generateUserProfile(
-  model: ClaudeModel = "claude-opus-4-8",
+  model: ClaudeModel = DEFAULT_MODEL,
   db: Db = getDb(),
 ): Promise<VoiceResult> {
   const all = loadUserMessages(db);

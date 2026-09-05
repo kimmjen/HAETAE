@@ -1,47 +1,24 @@
-import { useState, useRef, useEffect } from "react";
-import ReactMarkdown from "react-markdown";
-import { BookOpen, RefreshCw, AlertTriangle, FileCode, History, Undo2, Download } from "lucide-react";
+import { useState, useRef } from "react";
+import { BookOpen, RefreshCw, AlertTriangle, FileCode, History, Undo2, Download, Link as LinkIcon } from "lucide-react";
 import {
   useProjectWiki,
   useGenerateWiki,
   useWikiHistory,
   useRollbackWiki,
   useVaultExport,
+  useExternalSources,
+  useAddExternalSource,
+  useRemoveExternalSource,
   WIKI_MODELS,
   type WikiModel,
   type WikiGenerateResult,
 } from "@/hooks/useProjectWiki";
 import { ProjectGraphPanel } from "@/components/ProjectGraphPanel";
 import { WikiEvalBar } from "@/components/WikiEvalBar";
-import { shortModel } from "@/lib/models";
+import { extractToc, WikiMarkdown } from "./WikiMarkdown";
+import { DEFAULT_MODEL, shortModel } from "@/lib/models";
 import dayjs from "@/lib/dayjs";
 import { cn } from "@/lib/utils";
-
-interface TocEntry {
-  level: number;
-  text: string;
-  id: string;
-}
-
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^\w\s가-힣]/g, "")
-    .trim()
-    .replace(/\s+/g, "-");
-}
-
-function extractToc(markdown: string): TocEntry[] {
-  return markdown
-    .split("\n")
-    .map((line) => {
-      const m = line.match(/^(#{1,3})\s+(.+)/);
-      if (!m) return null;
-      const text = m[2].trim();
-      return { level: m[1].length, text, id: slugify(text) };
-    })
-    .filter((e): e is TocEntry => e !== null);
-}
 
 interface ProjectWikiPanelProps {
   projectPath: string;
@@ -50,10 +27,11 @@ interface ProjectWikiPanelProps {
 export function ProjectWikiPanel({ projectPath }: ProjectWikiPanelProps) {
   const wikiQ = useProjectWiki(projectPath);
   const generate = useGenerateWiki();
-  const [model, setModel] = useState<WikiModel>("claude-opus-4-8");
+  const [model, setModel] = useState<WikiModel>(DEFAULT_MODEL);
   const [showRaw, setShowRaw] = useState(false);
   const [lastResult, setLastResult] = useState<WikiGenerateResult | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [showSources, setShowSources] = useState(false);
   const historyQ = useWikiHistory(projectPath, showHistory);
   const rollback = useRollbackWiki();
   const contentRef = useRef<HTMLDivElement>(null);
@@ -145,7 +123,9 @@ export function ProjectWikiPanel({ projectPath }: ProjectWikiPanelProps) {
               History {showHistory ? "▾" : "▸"}
             </button>
             <VaultExportButton projectPath={projectPath} />
+            <SourcesToggle projectPath={projectPath} open={showSources} onToggle={() => setShowSources((v) => !v)} />
           </div>
+          {showSources && <ExternalSourcesStrip projectPath={projectPath} />}
           {showHistory && (
             <div className="px-3 pb-2 space-y-1 max-h-48 overflow-y-auto">
               {historyQ.isLoading && <div className="text-[9px] font-mono text-text-muted">Loading…</div>}
@@ -337,6 +317,106 @@ function PanelHeader({
   );
 }
 
+function SourcesToggle({
+  projectPath,
+  open,
+  onToggle,
+}: {
+  projectPath: string;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const sourcesQ = useExternalSources(projectPath);
+  const count = sourcesQ.data?.data.length ?? 0;
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="px-3 py-1 flex items-center gap-1 text-[9px] font-mono text-text-muted hover:text-text-main transition-colors"
+    >
+      <LinkIcon size={10} />
+      Sources{count > 0 ? ` (${count})` : ""} {open ? "▾" : "▸"}
+    </button>
+  );
+}
+
+/**
+ * External sources (#390): drop a URL → the server fetches + extracts text →
+ * the next wiki synthesis absorbs it as an attributed [E…] claim.
+ */
+function ExternalSourcesStrip({ projectPath }: { projectPath: string }) {
+  const sourcesQ = useExternalSources(projectPath);
+  const add = useAddExternalSource();
+  const remove = useRemoveExternalSource();
+  const [url, setUrl] = useState("");
+  const sources = sourcesQ.data?.data ?? [];
+
+  function handleAdd() {
+    const trimmed = url.trim();
+    if (!trimmed) return;
+    add.mutate({ projectPath, url: trimmed }, { onSuccess: () => setUrl("") });
+  }
+
+  return (
+    <div className="px-3 pb-2 space-y-1">
+      <div className="flex items-center gap-1">
+        <input
+          type="url"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+          placeholder="https:// — absorbed into the next wiki synthesis, always attributed"
+          disabled={add.isPending}
+          className="flex-1 bg-bg-primary border border-border-main text-[9px] font-mono text-text-main px-2 py-1 placeholder:text-text-subtle focus:outline-none focus-visible:border-accent disabled:opacity-50"
+        />
+        <button
+          type="button"
+          disabled={add.isPending || !url.trim()}
+          onClick={handleAdd}
+          aria-disabled={add.isPending || !url.trim()}
+          className={cn(
+            "px-2 py-1 text-[9px] font-bold uppercase border transition-colors",
+            add.isPending || !url.trim()
+              ? "border-border-main text-text-subtle cursor-not-allowed"
+              : "border-border-main bg-bg-primary text-text-main hover:bg-bg-hover",
+          )}
+        >
+          {add.isPending ? "Fetching…" : "Add"}
+        </button>
+      </div>
+      {add.isError && (
+        <div className="text-[9px] font-mono text-danger">
+          {add.error instanceof Error ? add.error.message : "Fetch failed"}
+        </div>
+      )}
+      {sources.length === 0 && !sourcesQ.isLoading && (
+        <div className="text-[9px] font-mono text-text-subtle">
+          No external sources — drop a URL to fold outside knowledge into the brain (provenance-tagged).
+        </div>
+      )}
+      {sources.map((s) => (
+        <div
+          key={s.id}
+          className="flex items-center gap-2 text-[9px] font-mono bg-bg-primary border border-border-main px-2 py-1"
+        >
+          <span className="text-text-main truncate flex-1" title={s.url}>
+            {s.title}
+          </span>
+          <span className="text-text-subtle shrink-0">{dayjs(s.fetchedAt).fromNow()}</span>
+          <button
+            type="button"
+            disabled={remove.isPending}
+            onClick={() => remove.mutate({ projectPath, id: s.id })}
+            className="inline-flex items-center px-1.5 py-0.5 text-[9px] font-bold uppercase border border-border-main bg-bg-secondary text-text-main hover:bg-bg-hover transition-colors disabled:opacity-50 shrink-0"
+          >
+            Remove
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** Export the brain (notes + wiki) as an Obsidian vault under .haetae/vault/. */
 function VaultExportButton({ projectPath }: { projectPath: string }) {
   const exportVault = useVaultExport();
@@ -352,7 +432,7 @@ function VaultExportButton({ projectPath }: { projectPath: string }) {
       type="button"
       disabled={exportVault.isPending}
       onClick={() => exportVault.mutate({ projectPath })}
-      title={exportVault.data?.dir ?? "Notes + wiki as a .md vault — open with Obsidian"}
+      title={exportVault.data?.dir ?? "Whole brain (notes + concepts + links + topics + wiki) as a .md vault — open with Obsidian"}
       className="px-3 py-1 flex items-center gap-1 text-[9px] font-mono text-text-muted hover:text-text-main transition-colors disabled:opacity-50"
     >
       <Download size={10} />
@@ -379,93 +459,5 @@ function EmptyState({ onGenerate }: { onGenerate: () => void }) {
         Generate Wiki
       </button>
     </div>
-  );
-}
-
-function WikiMarkdown({ content }: { content: string }) {
-  const idCounters = useRef<Map<string, number>>(new Map());
-
-  useEffect(() => {
-    idCounters.current.clear();
-  }, [content]);
-
-  function makeId(text: string): string {
-    const base = slugify(text);
-    const count = (idCounters.current.get(base) ?? 0) + 1;
-    idCounters.current.set(base, count);
-    return count === 1 ? base : `${base}-${count}`;
-  }
-
-  return (
-    <ReactMarkdown
-      components={{
-        h1: ({ children }) => {
-          const id = makeId(String(children));
-          return (
-            <h1
-              data-heading-id={id}
-              className="text-[14px] font-black uppercase tracking-tight text-text-main mb-3 pb-1 border-b border-border-main scroll-mt-4"
-            >
-              {children}
-            </h1>
-          );
-        },
-        h2: ({ children }) => {
-          const id = makeId(String(children));
-          return (
-            <h2
-              data-heading-id={id}
-              className="text-[12px] font-bold uppercase tracking-wide text-text-main mt-5 mb-2 scroll-mt-4"
-            >
-              {children}
-            </h2>
-          );
-        },
-        h3: ({ children }) => {
-          const id = makeId(String(children));
-          return (
-            <h3
-              data-heading-id={id}
-              className="text-[11px] font-bold text-text-main mt-3 mb-1 scroll-mt-4"
-            >
-              {children}
-            </h3>
-          );
-        },
-        p: ({ children }) => (
-          <p className="text-[11px] font-mono text-text-main leading-relaxed mb-2">{children}</p>
-        ),
-        ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-0.5">{children}</ul>,
-        ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-0.5">{children}</ol>,
-        li: ({ children }) => (
-          <li className="text-[11px] font-mono text-text-main leading-relaxed">{children}</li>
-        ),
-        code: ({ children, className }) => {
-          const isBlock = className?.startsWith("language-");
-          if (isBlock) {
-            return (
-              <pre className="bg-bg-primary border border-border-main p-2 text-[10px] font-mono text-text-main overflow-x-auto mb-2">
-                <code>{children}</code>
-              </pre>
-            );
-          }
-          return (
-            <code className="bg-bg-primary px-1 text-[10px] font-mono text-text-main">
-              {children}
-            </code>
-          );
-        },
-        blockquote: ({ children }) => (
-          <blockquote className="border-l-2 border-border-main pl-3 text-text-muted mb-2">
-            {children}
-          </blockquote>
-        ),
-        hr: () => <hr className="border-border-main my-3" />,
-        strong: ({ children }) => <strong className="font-bold text-text-main">{children}</strong>,
-        em: ({ children }) => <em className="italic text-text-muted">{children}</em>,
-      }}
-    >
-      {content}
-    </ReactMarkdown>
   );
 }

@@ -10,11 +10,17 @@ import { listWikiHistory } from "../services/memory/wiki-history";
 import { buildProjectGraph, buildGlobalGraph, buildSessionLocalGraph } from "../services/memory/graph";
 import { generateOntology, getOntology } from "../services/memory/ontology";
 import { generateNotes, getNotes } from "../services/memory/notes";
+import { generateTopics, getTopics } from "../services/memory/topics";
 import { askProjectBrain } from "../services/memory/ask";
 import { selectRelevantNotesSemantic } from "../services/memory/recall";
 import { generateLinks, getLinks } from "../services/memory/links";
 import { exportVault } from "../services/memory/vault";
 import { getAutoWikiStatus } from "../services/memory/auto-wiki";
+import {
+  addExternalSource,
+  listExternalSources,
+  removeExternalSource,
+} from "../services/memory/external-sources";
 import { generateEval, getEval, getEvalHistory } from "../services/memory/eval";
 import { coerceModel } from "../services/memory/claude-cli";
 import { discoverProjects, isKnownProjectPath } from "../services/projects/discover";
@@ -176,6 +182,58 @@ export async function registerProjectWikiRoutes(app: FastifyInstance) {
   );
 
   /**
+   * GET /api/wiki/topics?projectPath=
+   * Stored topic pages — the deep-dive wiki layer (#386). 404 if none yet.
+   */
+  app.get<{ Querystring: { projectPath?: string } }>("/api/wiki/topics", async (req, reply) => {
+    const { projectPath } = req.query;
+    if (!projectPath) {
+      reply.code(400).send({ error: "projectPath is required" });
+      return;
+    }
+    const result = getTopics(projectPath, getDb());
+    if (!result) {
+      reply.code(404).send({ error: "topics not found", projectPath });
+      return;
+    }
+    reply.header("Cache-Control", "no-store");
+    return result;
+  });
+
+  /**
+   * POST /api/wiki/topics/generate  { projectPath, model? }
+   * Plan + (re)generate topic pages from the wiki + conversation excerpts.
+   */
+  app.post<{ Body: { projectPath?: string; model?: string } }>(
+    "/api/wiki/topics/generate",
+    async (req, reply) => {
+      const { projectPath, model: modelRaw } = req.body ?? {};
+      if (!projectPath || typeof projectPath !== "string") {
+        reply.code(400).send({ error: "projectPath is required" });
+        return;
+      }
+      const model = coerceModel(modelRaw);
+
+      const db = getDb();
+      const known = (await discoverProjects(db)).map((p) => p.absolutePath);
+      if (!isKnownProjectPath(known, projectPath)) {
+        reply.code(403).send({ error: "unknown project path", projectPath });
+        return;
+      }
+
+      try {
+        const result = await generateTopics(projectPath, model, db);
+        reply.header("Cache-Control", "no-store");
+        return result;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        app.log.error({ err, projectPath }, "topics generation failed");
+        reply.code(500).send({ error: message });
+      }
+    },
+  );
+
+  /**
    * POST /api/wiki/ask  { projectPath, question, model? }
    * Answer a question against the project's second brain (wiki + relevant
    * conversation excerpts) with source attribution. Read-only + LLM; no file writes.
@@ -286,6 +344,79 @@ export async function registerProjectWikiRoutes(app: FastifyInstance) {
         app.log.error({ err, projectPath }, "links generation failed");
         reply.code(500).send({ error: message });
       }
+    },
+  );
+
+  /**
+   * GET /api/wiki/sources?projectPath= — the project's external sources.
+   */
+  app.get<{ Querystring: { projectPath?: string } }>("/api/wiki/sources", async (req, reply) => {
+    const { projectPath } = req.query;
+    if (!projectPath) {
+      reply.code(400).send({ error: "projectPath is required" });
+      return;
+    }
+    reply.header("Cache-Control", "no-store");
+    return { data: listExternalSources(projectPath, getDb()) };
+  });
+
+  /**
+   * POST /api/wiki/sources  { projectPath, url }
+   * Fetch a URL and absorb it into the project's brain as a tagged external
+   * source (server-side fetch + text extraction; same URL re-added = refresh).
+   */
+  app.post<{ Body: { projectPath?: string; url?: string } }>(
+    "/api/wiki/sources",
+    async (req, reply) => {
+      const { projectPath, url } = req.body ?? {};
+      if (!projectPath || typeof projectPath !== "string") {
+        reply.code(400).send({ error: "projectPath is required" });
+        return;
+      }
+      if (!url || typeof url !== "string" || !url.trim()) {
+        reply.code(400).send({ error: "url is required" });
+        return;
+      }
+      const db = getDb();
+      const known = (await discoverProjects(db)).map((p) => p.absolutePath);
+      if (!isKnownProjectPath(known, projectPath)) {
+        reply.code(403).send({ error: "unknown project path", projectPath });
+        return;
+      }
+      try {
+        const row = await addExternalSource(projectPath, url.trim(), db);
+        reply.header("Cache-Control", "no-store");
+        return row;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        app.log.error({ err, projectPath, url }, "external source add failed");
+        reply.code(400).send({ error: message });
+      }
+    },
+  );
+
+  /**
+   * POST /api/wiki/sources/remove  { projectPath, id } — DB row only.
+   */
+  app.post<{ Body: { projectPath?: string; id?: number } }>(
+    "/api/wiki/sources/remove",
+    async (req, reply) => {
+      const { projectPath, id } = req.body ?? {};
+      if (!projectPath || typeof projectPath !== "string") {
+        reply.code(400).send({ error: "projectPath is required" });
+        return;
+      }
+      if (typeof id !== "number") {
+        reply.code(400).send({ error: "id is required" });
+        return;
+      }
+      const removed = removeExternalSource(projectPath, id, getDb());
+      if (!removed) {
+        reply.code(404).send({ error: "source not found", id });
+        return;
+      }
+      reply.header("Cache-Control", "no-store");
+      return { removed: true };
     },
   );
 

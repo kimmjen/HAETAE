@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, apiGet, apiPost } from "@/lib/api-client";
+import type { WikiModel } from "@/lib/models";
 
 export interface GraphNode {
   id: string;
@@ -96,10 +97,15 @@ export function useOntologyGraph(projectPath: string | null, enabled = true) {
 export function useGenerateOntology() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ projectPath, model }: { projectPath: string; model: string }) =>
+    mutationFn: ({ projectPath, model }: { projectPath: string; model: WikiModel }) =>
       apiPost<OntologyResult>("/api/wiki/ontology/generate", { projectPath, model }),
     onSuccess: (data) => qc.setQueryData(["ontology-graph", data.projectPath], data),
   });
+}
+
+export interface NoteEvidence {
+  sessionId: string;
+  ts: number;
 }
 
 export interface AtomicNote {
@@ -107,6 +113,8 @@ export interface AtomicNote {
   title: string;
   /** Plain prose with inline [[slug]] wikilinks. */
   content: string;
+  /** Source sessions this note traces back to (≤3); absent on older notes. */
+  evidence?: NoteEvidence[];
 }
 
 export interface NotesResult {
@@ -139,7 +147,7 @@ export function useNotesGraph(projectPath: string | null, enabled = true) {
 export function useGenerateNotes() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ projectPath, model }: { projectPath: string; model: string }) =>
+    mutationFn: ({ projectPath, model }: { projectPath: string; model: WikiModel }) =>
       apiPost<NotesResult>("/api/wiki/notes/generate", { projectPath, model }),
     onSuccess: (data) => qc.setQueryData(["notes-graph", data.projectPath], data),
   });
@@ -189,8 +197,54 @@ export function useLinksGraph(projectPath: string | null, enabled = true) {
 export function useGenerateLinks() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ projectPath, model }: { projectPath: string; model: string }) =>
+    mutationFn: ({ projectPath, model }: { projectPath: string; model: WikiModel }) =>
       apiPost<LinksResult>("/api/wiki/links/generate", { projectPath, model }),
     onSuccess: (data) => qc.setQueryData(["links-graph", data.projectPath], data),
+  });
+}
+
+export interface TopicPage {
+  slug: string;
+  title: string;
+  /** Full markdown page. */
+  content: string;
+  /** Unix ms when this page was last (re)generated. */
+  generatedAt: number;
+}
+
+export interface TopicsResult {
+  projectPath: string;
+  topics: TopicPage[];
+  model: string;
+  generatedAt: number;
+  wikiGeneratedAt: number | null;
+  /** True when the wiki changed after these pages were generated. */
+  isStale: boolean;
+  /** Pages regenerated in the last run (empty on reads). */
+  updatedSlugs: string[];
+}
+
+export function useTopics(projectPath: string | null, enabled = true) {
+  return useQuery({
+    queryKey: ["topics", projectPath],
+    queryFn: ({ signal }) => {
+      const qs = new URLSearchParams({ projectPath: projectPath! }).toString();
+      return apiGet<TopicsResult>(`/api/wiki/topics?${qs}`, { signal }).catch((err) => {
+        if (err instanceof ApiError && err.status === 404) return null;
+        throw err;
+      });
+    },
+    enabled: !!projectPath && enabled,
+    staleTime: 60_000,
+    retry: false,
+  });
+}
+
+export function useGenerateTopics() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ projectPath, model }: { projectPath: string; model: WikiModel }) =>
+      apiPost<TopicsResult>("/api/wiki/topics/generate", { projectPath, model }),
+    onSuccess: (data) => qc.setQueryData(["topics", data.projectPath], data),
   });
 }

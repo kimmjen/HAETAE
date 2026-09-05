@@ -1,5 +1,78 @@
-import { describe, expect, it } from "vitest";
-import { parseNotes, extractWikilinks, notesToGraph, buildPrompt } from "./notes";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { closeDb, openDb, runMigrations, type Db } from "../../db";
+import { sessionMessages } from "../../db/schema";
+import {
+  parseNotes,
+  extractWikilinks,
+  notesToGraph,
+  buildPrompt,
+  maxNotesFor,
+  attachEvidence,
+} from "./notes";
+
+describe("maxNotesFor — 노트 상한 규모 비례 (#388)", () => {
+  it("작은 프로젝트는 기본 30", () => {
+    expect(maxNotesFor(0)).toBe(30);
+    expect(maxNotesFor(5_000)).toBe(30);
+  });
+  it("큰 프로젝트는 비례 상향, 60에서 캡", () => {
+    expect(maxNotesFor(14_000)).toBe(40);
+    expect(maxNotesFor(100_000)).toBe(60);
+  });
+});
+
+describe("attachEvidence — 근거 세션 부착 (#388)", () => {
+  let db: Db;
+  beforeEach(() => {
+    db = openDb({ filePath: ":memory:" });
+    runMigrations(db);
+    const rows = [
+      { uuid: "e1", sessionId: "sA", ts: 100, content: "워터마크 keyset 페이지네이션으로 증분 흡수한다" },
+      { uuid: "e2", sessionId: "sB", ts: 200, content: "워터마크를 전진시키기 전에 degenerate 가드를 통과해야 한다" },
+      { uuid: "e3", sessionId: "sC", ts: 300, content: "완전히 무관한 메시지 — 환율과 커피" },
+    ];
+    for (const r of rows) {
+      db.insert(sessionMessages)
+        .values({
+          uuid: r.uuid,
+          parentUuid: null,
+          sessionId: r.sessionId,
+          projectPath: "/p",
+          type: "user",
+          subtype: null,
+          content: r.content,
+          ts: r.ts,
+          isCompactSummary: false,
+        })
+        .run();
+    }
+  });
+  afterEach(() => closeDb());
+
+  it("노트 키워드와 겹치는 세션을 evidence로 붙인다 (sessionId 중복 제거, ≤3)", () => {
+    const notes = [{ slug: "watermark", title: "워터마크 증분", content: "워터마크 keyset 증분 흡수." }];
+    const out = attachEvidence(notes, "/p", db);
+    const ev = out[0].evidence ?? [];
+    expect(ev.length).toBeGreaterThan(0);
+    expect(ev.length).toBeLessThanOrEqual(3);
+    const ids = ev.map((e) => e.sessionId);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toContain("sA");
+  });
+
+  it("매칭이 없으면 evidence를 생략한다 (빈 배열 저장 안 함)", () => {
+    const notes = [{ slug: "none", title: "zzz", content: "qqqxyz" }];
+    const out = attachEvidence(notes, "/p", db);
+    expect(out[0].evidence).toBeUndefined();
+  });
+});
+
+describe("buildPrompt — 노트 상한 주입 (#388)", () => {
+  it("maxNotes 파라미터가 규칙 문구에 반영된다", () => {
+    expect(buildPrompt("proj", "wiki", [], 60)).toContain("8–60 notes");
+    expect(buildPrompt("proj", "wiki")).toContain("8–30 notes");
+  });
+});
 
 describe("buildPrompt — slug stability", () => {
   it("omits the existing-slugs block on first generation", () => {

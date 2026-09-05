@@ -81,7 +81,7 @@ describe("cascade — auto-regenerate stale derived layers", () => {
       insertOntology(1000);
       // eval 없음
 
-      const refreshed = await cascadeStaleDerived("/p", "claude-opus-4-7", db);
+      const refreshed = await cascadeStaleDerived("/p", "opus", db);
 
       expect(refreshed).toEqual(["notes", "ontology"]);
       expect(getNotes("/p", db)!.isStale).toBe(false);
@@ -100,7 +100,7 @@ describe("cascade — auto-regenerate stale derived layers", () => {
         return PAYLOAD;
       });
 
-      const refreshed = await cascadeStaleDerived("/p", "claude-opus-4-7", db);
+      const refreshed = await cascadeStaleDerived("/p", "opus", db);
 
       expect(refreshed).toEqual(["notes", "eval"]);
       expect(getOntology("/p", db)!.isStale).toBe(true); // 실패 → 여전히 낡음

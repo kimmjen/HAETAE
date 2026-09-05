@@ -104,6 +104,51 @@ export function useRollbackWiki() {
   });
 }
 
+export interface ExternalSource {
+  id: number;
+  projectPath: string;
+  url: string;
+  title: string;
+  fetchedAt: number;
+}
+
+/** External sources (#390) — user-dropped URLs absorbed into the brain. */
+export function useExternalSources(projectPath: string | null, enabled = true) {
+  return useQuery({
+    queryKey: ["wiki-sources", projectPath],
+    queryFn: ({ signal }) => {
+      const qs = new URLSearchParams({ projectPath: projectPath! }).toString();
+      return apiGet<{ data: ExternalSource[] }>(`/api/wiki/sources?${qs}`, { signal });
+    },
+    enabled: !!projectPath && enabled,
+    staleTime: 30_000,
+  });
+}
+
+export function useAddExternalSource() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ projectPath, url }: { projectPath: string; url: string }) =>
+      apiPost<ExternalSource>("/api/wiki/sources", { projectPath, url }),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["wiki-sources", data.projectPath] });
+    },
+  });
+}
+
+export function useRemoveExternalSource() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ projectPath, id }: { projectPath: string; id: number }) =>
+      apiPost<{ removed: boolean }>("/api/wiki/sources/remove", { projectPath, id }).then(
+        () => ({ projectPath }),
+      ),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["wiki-sources", data.projectPath] });
+    },
+  });
+}
+
 /** Materialize the brain as an Obsidian vault under <project>/.haetae/vault/. */
 export function useVaultExport() {
   return useMutation({

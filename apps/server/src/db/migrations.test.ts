@@ -23,8 +23,11 @@ import { closeDb, openDb, runMigrations } from "./index";
 
 function listExpectedTables(): string[] {
   return [
-    "app_state",
+    "external_sources",
     "file_backups",
+    "global_eval",
+    "global_topics",
+    "global_wiki",
     "project_roots",
     "memories",
     "project_eval",
@@ -32,6 +35,7 @@ function listExpectedTables(): string[] {
     "project_links",
     "project_notes",
     "project_ontology",
+    "project_topics",
     "project_wiki",
     "project_wiki_history",
     "session_messages",

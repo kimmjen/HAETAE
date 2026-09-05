@@ -3,9 +3,10 @@ import { getDb, type Db } from "../../db";
 import { sessionMessages, projectWiki, memories } from "../../db/schema";
 import { injectWikiIntoCLAUDEMd } from "./inject-wiki";
 import { archiveWikiVersion, getWikiHistoryEntry } from "./wiki-history";
-import { callClaude, type ClaudeModel } from "./claude-cli";
+import { callClaude, DEFAULT_MODEL, type ClaudeModel } from "./claude-cli";
 import { getEval, evalCorrectionHints } from "./eval";
 import { getNotes } from "./notes";
+import { listExternalSources, buildSourcesBlock } from "./external-sources";
 
 /**
  * Char budget for the NEW (delta) messages folded into the wiki in a single
@@ -23,8 +24,11 @@ const DELTA_BUDGET = 80_000;
  */
 const MEMORIES_BUDGET = 20_000;
 
-/** Wiki synthesis rewrites the whole wiki — needs far more than the 3m default. */
-const WIKI_TIMEOUT_MS = 600_000;
+/** Wiki synthesis rewrites the whole wiki — needs far more than the 3m default.
+ *  15m: a real KPG-advance fold (26k-char wiki + 481-msg delta, opus) exceeded
+ *  the previous 10m on 2026-07-30. The watermark makes a timeout safe (no
+ *  progress lost), but every timed-out run is a wasted full-cost LLM call. */
+const WIKI_TIMEOUT_MS = 900_000;
 
 /** Re-export under the wiki-facing name; single underlying type in claude-cli. */
 export type WikiModel = ClaudeModel;
@@ -191,10 +195,22 @@ const STRUCTURE = `# {PROJECT}
 
 ## 개요 / Overview
 ## 주요 기능 / Key Features
+## 아키텍처 / Architecture
 ## 기술 스택 / Tech Stack
 ## 최근 작업 / Recent Work
+## 트러블슈팅 이력 / Troubleshooting
 ## 결정 사항 / Decisions Made
 ## 다음 단계 / Next Steps`;
+
+/**
+ * Shared detail rules for both synthesis paths (#384). The wiki's value as
+ * long-term memory lives in its concrete identifiers — once an issue number or
+ * file path is generalized away, no future recall can get it back.
+ */
+const DETAIL_RULES = `Detail rules:
+- Keep concrete identifiers verbatim: issue/PR numbers (#N), file paths, dates, metric numbers, error messages, version strings.
+- 아키텍처 / Architecture: data flow and component responsibilities — how the pieces connect, not a feature list.
+- 트러블슈팅 이력 / Troubleshooting: one bullet per incident — symptom → root cause → fix, with the date/issue when known.`;
 
 /**
  * Build the synthesis prompt. When `existingWiki` is empty this is a from-
@@ -213,7 +229,19 @@ export function buildPrompt(
   memoriesPrelude = "",
   auditFindings = "",
   budget = DELTA_BUDGET,
+  sourcesBlock = "",
 ): string {
+  // External sources (#390): user-dropped documents ride along with EVERY
+  // synthesis, always tagged — provenance separation is the contract, so the
+  // wiki can absorb outside knowledge without laundering it into "we decided".
+  const externalBlock = sourcesBlock.trim()
+    ? `\n=== EXTERNAL SOURCES ([E…] = user-added documents — reference claims, NOT conversation-established facts) ===
+${sourcesBlock.trim()}
+`
+    : "";
+  const externalRule = sourcesBlock.trim()
+    ? "\n- Statements derived from EXTERNAL SOURCES must be attributed inline (예: \"… (출처: [E1])\") — never present an external claim as a conversation-established fact."
+    : "";
   const transcript = selected
     .map((m) => {
       const role = m.type === "user" ? "User" : "Assistant";
@@ -240,14 +268,16 @@ ${memoriesPrelude.trim()}
 
 ${preludeBlock}=== DETAILED conversation messages (oldest→newest, ${selected.length} of ${totalPending} pending) ===
 ${transcript}
-
+${externalBlock}
 ---
 
 Write a wiki page in Markdown with this exact section structure:
 
 ${structure}
 
-${preludeBlock ? "Use the compressed long-term memory for project-wide breadth and the detailed messages for specifics. Do NOT duplicate the same fact from both — reconcile into one statement.\n" : ""}Only include information derived from the conversation. Use bullet points. Write in mixed Korean/English for a bilingual developer audience. Output ONLY the markdown — no preamble.`;
+${DETAIL_RULES}${externalRule}
+
+${preludeBlock ? "Use the compressed long-term memory for project-wide breadth and the detailed messages for specifics. Do NOT duplicate the same fact from both — reconcile into one statement.\n" : ""}Only include information derived from the conversation${sourcesBlock.trim() ? " or the external sources (attributed)" : ""}. Use bullet points. Write in mixed Korean/English for a bilingual developer audience. Output ONLY the markdown — no preamble.`;
   }
 
   // The wiki's own auditor (eval) flagged these against the CURRENT wiki; feed
@@ -268,16 +298,20 @@ ${existingWiki.trim()}
 
 === NEW conversation messages since the last update (oldest→newest, ${selected.length} of ${totalPending} pending) ===
 ${transcript}
-${auditBlock}
+${auditBlock}${externalBlock}
 ---
 
 Produce the UPDATED full wiki in Markdown, keeping the section structure:
 
 ${structure}
 
-Reconciliation rules — this is the whole point:${auditRule}
+${DETAIL_RULES}
+
+Reconciliation rules — this is the whole point:${auditRule}${externalRule}
 - If a new message changes or supersedes something in the current wiki (a decision reversed, a tool swapped, an approach abandoned), UPDATE that content. Do not keep both the old and new — state the current truth, and you may briefly note what it superseded.
 - PRESERVE older decisions, architecture, and history that the new messages do not touch. Do NOT drop them just because they are absent from the new messages — the new messages are a delta, not the whole story.
+- PRESERVE specificity while merging: never replace a concrete statement (numbers, paths, issue refs) with a vaguer one. Detail lost here is unrecoverable.
+- If a skeleton section is missing from the current wiki, create it by REORGANIZING existing wiki content and the new messages — never invent facts to fill it.
 - Deduplicate: fold overlapping facts together rather than repeating them.
 - Only include information derivable from the wiki or the conversation. Korean/English mixed. Output ONLY the markdown — no preamble.`;
 }
@@ -341,7 +375,7 @@ export interface GenerateOptions {
  */
 export async function generateProjectWiki(
   projectPath: string,
-  model: WikiModel = "claude-opus-4-7",
+  model: WikiModel = DEFAULT_MODEL,
   db: Db = getDb(),
   opts: GenerateOptions = {},
 ): Promise<WikiGenerateResult> {
@@ -390,6 +424,9 @@ export async function generateProjectWiki(
   const audit = reuse ? getEval(projectPath, db) : null;
   const auditFindings = audit ? evalCorrectionHints(audit.report) : "";
 
+  // External sources ride along with every synthesis, tagged for attribution.
+  const sourcesBlock = buildSourcesBlock(listExternalSources(projectPath, db));
+
   const prompt = buildPrompt(
     projectName,
     existingContent,
@@ -397,6 +434,8 @@ export async function generateProjectWiki(
     delta.length,
     memoriesPrelude,
     auditFindings,
+    undefined,
+    sourcesBlock,
   );
   // Wiki synthesis is the heaviest call in the brain — the model rewrites the
   // ENTIRE wiki (existing content + up to DELTA_BUDGET of new messages), so as

@@ -34,21 +34,21 @@ describe("mcp tools", () => {
     it("returns the relevant note bodies the agent selected by meaning", async () => {
       seedNotes();
       vi.mocked(callClaude).mockResolvedValue('{"slugs": ["oauth"]}');
-      const text = await recallNotes("/p", "인증은 어떻게?", "claude-opus-4-8", db);
+      const text = await recallNotes("/p", "인증은 어떻게?", "opus", db);
       expect(text).toContain("OAuth 한도");
       expect(text).toContain("한도 조회");
       expect(text).toContain("[N1]"); // citable block
     });
 
     it("messages when no notes exist", async () => {
-      const text = await recallNotes("/p", "q", "claude-opus-4-8", db);
+      const text = await recallNotes("/p", "q", "opus", db);
       expect(text).toContain("원자 노트가 없습니다");
     });
 
     it("messages when nothing is relevant", async () => {
       seedNotes();
       vi.mocked(callClaude).mockResolvedValue('{"slugs": []}');
-      expect(await recallNotes("/p", "무관", "claude-opus-4-8", db)).toContain("찾지 못했습니다");
+      expect(await recallNotes("/p", "무관", "opus", db)).toContain("찾지 못했습니다");
     });
   });
 
@@ -64,13 +64,13 @@ describe("mcp tools", () => {
         })
         .run();
       vi.mocked(callClaude).mockResolvedValue('{"slugs": ["Alpha/grid", "p/oauth"]}');
-      const text = await recallGlobal("주파수?", "claude-opus-4-8", db);
+      const text = await recallGlobal("주파수?", "opus", db);
       expect(text).toContain("(Alpha) 계통 안정도");
       expect(text).toContain("(p) OAuth 한도");
     });
 
     it("messages when no project has notes", async () => {
-      expect(await recallGlobal("q", "claude-opus-4-8", db)).toContain("노트가 있는 프로젝트가 없습니다");
+      expect(await recallGlobal("q", "opus", db)).toContain("노트가 있는 프로젝트가 없습니다");
     });
   });
 
@@ -83,7 +83,7 @@ describe("mcp tools", () => {
           ? '{"slugs": ["oauth"]}'
           : "OAuth 토큰을 키체인에서 읽습니다 [N1].",
       );
-      const text = await askBrain("/p", "인증?", "claude-opus-4-8", db);
+      const text = await askBrain("/p", "인증?", "opus", db);
       expect(text).toContain("키체인에서 읽습니다");
     });
   });

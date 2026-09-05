@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { getDb, type Db } from "../../db";
 import { sessionMessages, projectWiki } from "../../db/schema";
-import { callClaude, type ClaudeModel } from "./claude-cli";
+import { callClaude, DEFAULT_MODEL, type ClaudeModel } from "./claude-cli";
 import { getNotes } from "./notes";
 import {
   selectRelevantNotes,
@@ -27,7 +27,12 @@ export function questionKeywords(question: string): string[] {
   const out: string[] = [];
   for (const raw of question.toLowerCase().split(/[\s,.?!()[\]{}"'`/\\]+/)) {
     const w = raw.replace(/[^a-z0-9가-힣]/g, "");
-    if (w.length < 2 || STOPWORDS.has(w) || seen.has(w)) continue;
+    // Latin tokens under 3 chars ("ts", "js", "ui", "db") — often filename
+    // fragments like "topics.ts" → "ts" — match almost any message and drown
+    // the real signal. Hangul is dense, so 2 chars ("노트", "위키") stay
+    // meaningful. Drop short-latin noise; keep short-Hangul.
+    const minLen = /[가-힣]/.test(w) ? 2 : 3;
+    if (w.length < minLen || STOPWORDS.has(w) || seen.has(w)) continue;
     seen.add(w);
     out.push(w);
     if (out.length >= MAX_KEYWORDS) break;
@@ -143,7 +148,7 @@ export interface AskResult {
 export async function askProjectBrain(
   projectPath: string,
   question: string,
-  model: ClaudeModel = "claude-opus-4-8",
+  model: ClaudeModel = DEFAULT_MODEL,
   db: Db = getDb(),
 ): Promise<AskResult> {
   const sources = selectSources(db, projectPath, question);

@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import ReactMarkdown from "react-markdown";
 import { Sparkles, RefreshCw, MessageCircleQuestion } from "lucide-react";
 import { useAskBrain, type BrainSource } from "@/hooks/useAskBrain";
+import { DEFAULT_MODEL } from "@/lib/models";
 import dayjs from "@/lib/dayjs";
 
 /**
@@ -17,9 +18,9 @@ export function ProjectQAPanel({ projectPath }: { projectPath: string }) {
 
   function submit() {
     const q = question.trim();
-    // Sonnet for interactive Q&A — responsiveness matters more than the last
-    // bit of quality here (the wiki/ontology batch jobs use Opus).
-    if (q && !ask.isPending) ask.mutate({ projectPath, question: q, model: "claude-sonnet-4-6" });
+    // No picker here: interactive Q&A takes the default tier, where
+    // responsiveness matters more than the last bit of quality.
+    if (q && !ask.isPending) ask.mutate({ projectPath, question: q, model: DEFAULT_MODEL });
   }
 
   return (

@@ -26,12 +26,6 @@ export class UnknownScopeError extends Error {
   }
 }
 
-export const GLOBAL_SCOPE: ResolvedScope = {
-  key: "global",
-  claudeHome: "", // populated lazily; resolveScope("global") fills it
-  kind: "global",
-};
-
 /**
  * Map an opaque scope id (`undefined` / `"global"` / a project slug) to a
  * `ResolvedScope`. `claudeHome` always points at a `.claude` directory —

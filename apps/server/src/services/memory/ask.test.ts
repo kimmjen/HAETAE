@@ -17,6 +17,13 @@ describe("questionKeywords", () => {
   it("returns empty for an all-stopword question", () => {
     expect(questionKeywords("how is the")).toEqual([]);
   });
+  it("drops short-latin noise (topics.ts → ts) but keeps latin ≥3 and Hangul 2-char", () => {
+    const kw = questionKeywords("topics.ts 노트 fts");
+    expect(kw).toContain("topics"); // latin ≥3 kept
+    expect(kw).toContain("fts"); // latin 3-char kept
+    expect(kw).toContain("노트"); // Hangul 2-char kept
+    expect(kw).not.toContain("ts"); // latin 2-char filename noise dropped
+  });
 });
 
 describe("selectSources", () => {

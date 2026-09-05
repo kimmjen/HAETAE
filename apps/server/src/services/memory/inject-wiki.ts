@@ -23,8 +23,10 @@ const SECTION_PRIORITY: Array<{ re: RegExp; rank: number }> = [
   { re: /overview|개요/i, rank: 1 },
   { re: /decision|결정/i, rank: 2 },
   { re: /next|다음/i, rank: 3 },
+  { re: /arch|아키텍처/i, rank: 4 },
   { re: /tech|기술/i, rank: 4 },
   { re: /feature|기능|주요/i, rank: 5 },
+  { re: /trouble|트러블/i, rank: 6 },
   { re: /recent|최근/i, rank: 7 },
 ];
 

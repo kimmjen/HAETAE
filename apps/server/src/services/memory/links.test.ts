@@ -103,7 +103,7 @@ describe("generateLinks / getLinks (DB)", () => {
   };
 
   it("throws when notes or ontology are missing", async () => {
-    await expect(generateLinks("/p", "claude-opus-4-8", db)).rejects.toThrow();
+    await expect(generateLinks("/p", "opus", db)).rejects.toThrow();
   });
 
   it("generates, stores, and returns a unified graph; getLinks reads it back", async () => {
@@ -111,7 +111,7 @@ describe("generateLinks / getLinks (DB)", () => {
     vi.mocked(callClaude).mockResolvedValue(
       JSON.stringify({ links: [{ noteSlug: "oauth", conceptId: "auth" }] }),
     );
-    const res = await generateLinks("/p", "claude-opus-4-8", db);
+    const res = await generateLinks("/p", "opus", db);
     expect(res.links).toEqual([{ noteSlug: "oauth", conceptId: "auth" }]);
     expect(res.graph.edges.some((e) => e.type === "mentions")).toBe(true);
 
@@ -123,7 +123,7 @@ describe("generateLinks / getLinks (DB)", () => {
   it("isStale when the wiki was regenerated after linking", async () => {
     seed();
     vi.mocked(callClaude).mockResolvedValue(JSON.stringify({ links: [] }));
-    await generateLinks("/p", "claude-opus-4-8", db);
+    await generateLinks("/p", "opus", db);
     db.update(projectWiki).set({ generatedAt: 9_999_999_999_999 }).run();
     expect(getLinks("/p", db)!.isStale).toBe(true);
   });

@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { getDb, type Db } from "../../db";
 import { projectOntology, projectWiki } from "../../db/schema";
-import { callClaude, extractJson, type ClaudeModel } from "./claude-cli";
+import { callClaude, extractJson, DEFAULT_MODEL, type ClaudeModel } from "./claude-cli";
 import { isDerivedStale, getWikiGeneratedAt } from "./staleness";
 import type { GraphNode, GraphEdge, ProjectGraphData } from "./graph";
 
@@ -198,7 +198,7 @@ export function getOntology(projectPath: string, db: Db = getDb()): OntologyResu
  */
 export async function generateOntology(
   projectPath: string,
-  model: ClaudeModel = "claude-opus-4-8",
+  model: ClaudeModel = DEFAULT_MODEL,
   db: Db = getDb(),
 ): Promise<OntologyResult> {
   const wiki = db

@@ -1,7 +1,4 @@
-// @hookform/resolvers 5.2 의 zod 통합이 zod v4 API 와 미세하게 안 맞아서
-// 위저드 스키마는 zod/v3 (zod 4 패키지에서 함께 제공) 으로 import.
-// 다른 곳 (server zod, useSearch 등) 은 zod 기본(v4) 그대로 둠.
-import { z } from "zod/v3";
+import { z } from "zod";
 
 const NAME_PATTERN = /^[a-z0-9_-]+$/;
 
@@ -32,3 +29,23 @@ export const STEP_FIELDS = {
   options: ["options.disableModelInvocation", "options.userInvocable"] as const,
   body: ["body"] as const,
 };
+
+/** Field errors keyed by dot-path (e.g. "name", "options.userInvocable"). */
+export type FieldErrors = Partial<Record<string, string>>;
+
+/**
+ * Validate the whole form (or just `fields` for per-step gating) and return
+ * the first message per errored path. Replaces react-hook-form's resolver +
+ * trigger — the wizard has 5 fields, so a safeParse pass is all it needed.
+ */
+export function validate(values: WizardData, fields?: readonly string[]): FieldErrors {
+  const result = wizardSchema.safeParse(values);
+  if (result.success) return {};
+  const errs: FieldErrors = {};
+  for (const issue of result.error.issues) {
+    const path = issue.path.join(".");
+    if (fields && !fields.some((f) => path === f || path.startsWith(`${f}.`))) continue;
+    if (!(path in errs)) errs[path] = issue.message;
+  }
+  return errs;
+}

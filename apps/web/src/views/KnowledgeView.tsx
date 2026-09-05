@@ -10,12 +10,14 @@ import {
 import { useSessionSearch, type SessionSearchHit } from "@/hooks/useSessionSearch";
 import { useProjects } from "@/hooks/useProjects";
 import { BrainAskPanel } from "@/components/BrainAskPanel";
+import { GlobalBrainPanel } from "@/components/GlobalBrainPanel";
 import dayjs from "@/lib/dayjs";
 import { cn } from "@/lib/utils";
 
-type Layer = "projects" | "notes" | "concepts" | "search" | "ask";
+type Layer = "brain" | "projects" | "notes" | "concepts" | "search" | "ask";
 
 const LAYERS: { key: Layer; label: string }[] = [
+  { key: "brain", label: "Brain" },
   { key: "projects", label: "Projects" },
   { key: "notes", label: "Notes" },
   { key: "concepts", label: "Concepts" },
@@ -24,7 +26,7 @@ const LAYERS: { key: Layer; label: string }[] = [
 ];
 
 export function KnowledgeView() {
-  const [layer, setLayer] = useState<Layer>("projects");
+  const [layer, setLayer] = useState<Layer>("brain");
   const [projectFilter, setProjectFilter] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -108,7 +110,9 @@ export function KnowledgeView() {
         </div>
       </div>
 
-      {layer === "ask" ? (
+      {layer === "brain" ? (
+        <GlobalBrainPanel />
+      ) : layer === "ask" ? (
         <BrainAskPanel
           projectFilter={projectFilter}
           projectName={projectFilter ? labelOf(projectFilter) : undefined}

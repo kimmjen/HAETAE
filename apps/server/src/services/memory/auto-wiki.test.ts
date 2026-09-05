@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { closeDb, openDb, runMigrations, type Db } from "../../db";
 import { sessionMessages, projectWiki } from "../../db/schema";
 import { selectAutoWikiCandidates, newestMessageTs, readAutoWikiConfig, getAutoWikiStatus, type AutoWikiConfig } from "./auto-wiki";
+import { DEFAULT_MODEL } from "./claude-cli";
 
 const NOW = 10_000_000;
 const CFG: AutoWikiConfig = { debounceMs: 1_000, cooldownMs: 5_000 };
@@ -88,7 +89,7 @@ describe("selectAutoWikiCandidates", () => {
   it("falls back to a safe model when the stored model is unknown", () => {
     addWiki(db, "/legacy", { generatedAt: NOW - 6_000, model: "gpt-legacy" });
     addMsg(db, "/legacy", "l1", 100);
-    expect(selectAutoWikiCandidates(db, NOW, CFG)[0].model).toBe("claude-opus-4-7");
+    expect(selectAutoWikiCandidates(db, NOW, CFG)[0].model).toBe(DEFAULT_MODEL);
   });
 });
 

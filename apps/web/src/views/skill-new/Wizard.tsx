@@ -1,6 +1,4 @@
-import { useState } from "react";
-import { FormProvider, useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useCallback, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { ApiError } from "@/lib/api-client";
@@ -8,7 +6,8 @@ import { assembleFile, buildSkillPath } from "@/lib/skill-template";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { FileExistsError, useCreateFile } from "@/hooks/useCreateFile";
 import { Route as NewSkillRoute } from "@/routes/guarding/skills/new";
-import { STEP_FIELDS, wizardSchema, type WizardData } from "./schema";
+import { STEP_FIELDS, validate, type WizardData, type FieldErrors } from "./schema";
+import { WizardFormContext } from "./form";
 import { Stepper } from "./Stepper";
 import { BasicsStep } from "./steps/Basics";
 import { OptionsStep } from "./steps/Options";
@@ -32,19 +31,37 @@ export function SkillWizard() {
   const navigate = useNavigate();
   const { scope } = NewSkillRoute.useSearch();
   const create = useCreateFile(scope ?? "global");
-  const form = useForm<WizardData>({
-    resolver: zodResolver(wizardSchema),
-    defaultValues: DEFAULTS,
-    mode: "onTouched",
-  });
 
+  const [values, setValues] = useState<WizardData>(DEFAULTS);
+  const [errors, setErrors] = useState<FieldErrors>({});
   const [stepIndex, setStepIndex] = useState(0);
   const [cancelOpen, setCancelOpen] = useState(false);
   const stepId: StepId = STEP_ORDER[stepIndex]!;
+  const isDirty = JSON.stringify(values) !== JSON.stringify(DEFAULTS);
 
-  const goNext = async () => {
-    const ok = await form.trigger(STEP_FIELDS[stepId]);
-    if (ok) setStepIndex((i) => Math.min(i + 1, STEP_ORDER.length - 1));
+  const setField = useCallback(<K extends keyof WizardData>(key: K, value: WizardData[K]) => {
+    setValues((v) => ({ ...v, [key]: value }));
+    // Clear a field's error the moment it changes — RHF's onTouched felt like this.
+    setErrors((e) => {
+      if (!(key in e)) return e;
+      const next = { ...e };
+      delete next[key];
+      return next;
+    });
+  }, []);
+
+  const setOption = useCallback((key: keyof WizardData["options"], value: boolean) => {
+    setValues((v) => ({ ...v, options: { ...v.options, [key]: value } }));
+  }, []);
+
+  const goNext = () => {
+    const stepErrors = validate(values, STEP_FIELDS[stepId]);
+    if (Object.keys(stepErrors).length > 0) {
+      setErrors(stepErrors);
+      return;
+    }
+    setErrors({});
+    setStepIndex((i) => Math.min(i + 1, STEP_ORDER.length - 1));
   };
 
   const goBack = () => setStepIndex((i) => Math.max(0, i - 1));
@@ -71,9 +88,15 @@ export function SkillWizard() {
     });
   };
 
-  const onSubmit = form.handleSubmit((data) => {
-    const path = buildSkillPath(data.directory, data.name);
-    const content = assembleFile(data);
+  const onSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const allErrors = validate(values);
+    if (Object.keys(allErrors).length > 0) {
+      setErrors(allErrors);
+      return;
+    }
+    const path = buildSkillPath(values.directory, values.name);
+    const content = assembleFile(values);
     create.mutate(
       { path, content },
       {
@@ -96,11 +119,10 @@ export function SkillWizard() {
         },
       },
     );
-  });
+  };
 
   const isLast = stepIndex === STEP_ORDER.length - 1;
   const submitting = create.isPending;
-  const { isDirty } = form.formState;
 
   const handleCancel = () => {
     if (submitting) return;
@@ -116,7 +138,7 @@ export function SkillWizard() {
   };
 
   return (
-    <FormProvider {...form}>
+    <WizardFormContext.Provider value={{ values, errors, setField, setOption }}>
       <form
         onSubmit={onSubmit}
         className="max-w-4xl border border-border-main bg-bg-primary"
@@ -192,6 +214,6 @@ export function SkillWizard() {
         variant="danger"
         onConfirm={confirmCancel}
       />
-    </FormProvider>
+    </WizardFormContext.Provider>
   );
 }

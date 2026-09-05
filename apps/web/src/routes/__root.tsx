@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Outlet, createRootRouteWithContext, useMatches, useNavigate } from "@tanstack/react-router";
 import type { QueryClient } from "@tanstack/react-query";
-import { AnimatePresence, motion } from "motion/react";
 import { Sidebar } from "@/components/Sidebar";
 import { TopHeader } from "@/components/TopHeader";
 import { Footer } from "@/components/Footer";
@@ -67,18 +66,11 @@ function RootLayout() {
             />
 
             <div className="flex-1 overflow-y-auto p-4 bg-bg-primary">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={transitionKey}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.1 }}
-                  className="max-w-[1600px] mx-auto w-full"
-                >
-                  <Outlet />
-                </motion.div>
-              </AnimatePresence>
+              {/* Keyed so React remounts on navigation, replaying the CSS
+                  fade — the exit fade is dropped (0.1s, imperceptible). */}
+              <div key={transitionKey} className="max-w-[1600px] mx-auto w-full animate-fade-in">
+                <Outlet />
+              </div>
             </div>
 
             <Footer sessionId="A8F22X" cacheSize="1.2GB" status="READY TO SYNC" />

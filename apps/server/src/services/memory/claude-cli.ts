@@ -2,19 +2,30 @@ import { spawn } from "node:child_process";
 
 /**
  * Single source of truth for the models the second-brain features may use.
- * Order = UI dropdown order / default-fallback preference.
+ *
+ * These are the CLI's tier ALIASES, not pinned ids: `claude --model opus`
+ * resolves to whatever the current Opus is. Pinning (`claude-opus-4-8`) is what
+ * left this list a whole generation behind while three separate copies of it
+ * drifted apart — and a picker whose real meaning is "how good / how expensive"
+ * has no business naming a version anyway.
+ *
+ * `fable` is deliberately absent: at $10/$50 per MTok it is the priciest tier by
+ * some way, and nothing the brain does needs it over Opus. It is priced in
+ * `usage/pricing.ts`, so adding it here is a one-line change if that changes.
+ *
+ * Order = UI dropdown order, mirrored in `apps/web/src/lib/models.ts`; first
+ * entry is the default.
  */
-export const CLAUDE_MODELS = [
-  "claude-opus-4-8",
-  "claude-opus-4-7",
-  "claude-sonnet-4-6",
-  "claude-haiku-4-5-20251001",
-] as const;
+export const CLAUDE_MODELS = ["sonnet", "opus", "haiku"] as const;
 
 export type ClaudeModel = (typeof CLAUDE_MODELS)[number];
 
 /** Default model when a request omits/invalid one. */
-export const DEFAULT_MODEL: ClaudeModel = "claude-opus-4-7";
+// Sonnet, not Opus — the brain fires a lot of `claude --print` calls (wiki
+// synthesis + cascade layers per fold) and every OSS user pays for them from
+// their own CLI quota. Sonnet keeps the default cost sane; Opus stays one
+// click away in every model picker for anyone who wants the extra quality.
+export const DEFAULT_MODEL: ClaudeModel = CLAUDE_MODELS[0];
 
 /** Validate an arbitrary string against the model allowlist. */
 export function isClaudeModel(s: unknown): s is ClaudeModel {

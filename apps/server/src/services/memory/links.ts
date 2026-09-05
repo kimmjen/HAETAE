@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { getDb, type Db } from "../../db";
 import { projectLinks, projectNotes, projectOntology } from "../../db/schema";
-import { callClaude, extractJson, type ClaudeModel } from "./claude-cli";
+import { callClaude, extractJson, DEFAULT_MODEL, type ClaudeModel } from "./claude-cli";
 import { isDerivedStale, getWikiGeneratedAt } from "./staleness";
 import { type AtomicNote, notesToGraph } from "./notes";
 import { type Ontology, type OntologyConcept, ontologyToGraph } from "./ontology";
@@ -159,7 +159,7 @@ export function getLinks(projectPath: string, db: Db = getDb()): LinksResult | n
  */
 export async function generateLinks(
   projectPath: string,
-  model: ClaudeModel = "claude-opus-4-8",
+  model: ClaudeModel = DEFAULT_MODEL,
   db: Db = getDb(),
 ): Promise<LinksResult> {
   const notes = loadNotes(projectPath, db);

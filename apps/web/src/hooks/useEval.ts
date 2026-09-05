@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost } from "@/lib/api-client";
+import type { WikiModel } from "@/lib/models";
 
 export interface EvalIssue {
   type: "accuracy" | "staleness" | "gap" | "vibe";
@@ -55,7 +56,7 @@ export function useEvalHistory(projectPath: string | null) {
 export function useGenerateEval() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ projectPath, model }: { projectPath: string; model: string }) =>
+    mutationFn: ({ projectPath, model }: { projectPath: string; model: WikiModel }) =>
       apiPost<EvalResult>("/api/wiki/eval/generate", { projectPath, model }),
     onSuccess: (data) => qc.setQueryData(["wiki-eval", data.projectPath], { eval: data }),
   });

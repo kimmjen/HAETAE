@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { RefreshCw, Sparkles, X } from "lucide-react";
 import {
   useProjectGraph,
@@ -116,7 +116,7 @@ function OntologyGraph({ projectPath }: { projectPath: string }) {
         )}
         <button
           type="button"
-          onClick={() => generate.mutate({ projectPath, model: "claude-opus-4-7" })}
+          onClick={() => generate.mutate({ projectPath, model: "opus" })}
           className="px-3 py-1 text-[10px] font-bold uppercase border border-accent bg-accent text-text-on-accent hover:bg-accent-hover transition-colors"
         >
           Generate Ontology
@@ -155,7 +155,7 @@ function OntologyGraph({ projectPath }: { projectPath: string }) {
           {onto?.isStale ? (
             <span className="ml-auto">
               <StaleBadge
-                onRegenerate={() => generate.mutate({ projectPath, model: "claude-opus-4-7" })}
+                onRegenerate={() => generate.mutate({ projectPath, model: "opus" })}
                 pending={generate.isPending}
               />
             </span>
@@ -194,7 +194,7 @@ function NotesGraph({ projectPath }: { projectPath: string }) {
         )}
         <button
           type="button"
-          onClick={() => generate.mutate({ projectPath, model: "claude-opus-4-7" })}
+          onClick={() => generate.mutate({ projectPath, model: "opus" })}
           className="px-3 py-1 text-[10px] font-bold uppercase border border-accent bg-accent text-text-on-accent hover:bg-accent-hover transition-colors"
         >
           Generate Notes
@@ -239,7 +239,7 @@ function NotesGraph({ projectPath }: { projectPath: string }) {
           {result?.isStale ? (
             <span className="ml-auto">
               <StaleBadge
-                onRegenerate={() => generate.mutate({ projectPath, model: "claude-opus-4-7" })}
+                onRegenerate={() => generate.mutate({ projectPath, model: "opus" })}
                 pending={generate.isPending}
               />
             </span>
@@ -349,7 +349,7 @@ function UnifiedGraph({ projectPath }: { projectPath: string }) {
   const q = useLinksGraph(projectPath);
   const generate = useGenerateLinks();
   const result = q.data;
-  const regenerate = () => generate.mutate({ projectPath, model: "claude-opus-4-7" });
+  const regenerate = () => generate.mutate({ projectPath, model: "opus" });
 
   if (!q.isLoading && !result && !generate.isPending) {
     return (
@@ -454,6 +454,24 @@ function NoteOverlay({
           );
         })}
       </div>
+      {note.evidence && note.evidence.length > 0 && (
+        <div className="mt-2 pt-1.5 border-t border-border-main">
+          <div className="text-[8px] font-bold uppercase tracking-widest text-text-subtle mb-1">
+            Sources
+          </div>
+          {note.evidence.map((e) => (
+            <Link
+              key={e.sessionId}
+              to="/watching/sessions/$sessionId"
+              params={{ sessionId: e.sessionId }}
+              className="block text-[9px] font-mono text-accent hover:text-accent-hover truncate"
+              title={e.sessionId}
+            >
+              {dayjs(e.ts).format("YYYY-MM-DD")} · {e.sessionId.slice(0, 8)}…
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

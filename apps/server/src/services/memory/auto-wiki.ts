@@ -2,7 +2,10 @@ import { sql } from "drizzle-orm";
 import { getDb, type Db } from "../../db";
 import { sessionMessages } from "../../db/schema";
 import { listProjectWikis, generateProjectWiki, type WikiModel } from "./wiki";
+import { DEFAULT_MODEL, isClaudeModel } from "./claude-cli";
+import { reExportVaultIfExists } from "./vault";
 import { cascadeStaleDerived } from "./cascade";
+import { acquireFoldLock } from "./fold-lock";
 
 /**
  * Automatic wiki updates — the piece that actually closes the self-improving
@@ -39,12 +42,6 @@ const DEFAULT_INTERVAL_MS = 300_000; // 5 min
 const DEFAULT_DEBOUNCE_MS = 600_000; // 10 min quiet
 const DEFAULT_COOLDOWN_MS = 1_800_000; // 30 min per project
 
-const VALID_MODELS = new Set<string>([
-  "claude-opus-4-7",
-  "claude-sonnet-4-6",
-  "claude-haiku-4-5-20251001",
-]);
-
 /** Newest real (user/assistant, non-compact) message ts for a project, or 0. */
 export function newestMessageTs(db: Db, projectPath: string): number {
   const row = db
@@ -77,7 +74,9 @@ export function selectAutoWikiCandidates(
     if (nowMs - w.generatedAt < cfg.cooldownMs) continue; // cooldown not elapsed
     const newest = newestMessageTs(db, w.projectPath);
     if (newest === 0 || nowMs - newest < cfg.debounceMs) continue; // not settled
-    const model = (VALID_MODELS.has(w.model) ? w.model : "claude-opus-4-7") as WikiModel;
+    // Rows written before the alias switch carry pinned ids that no longer
+    // validate — fold them on the default rather than a retired model.
+    const model: WikiModel = isClaudeModel(w.model) ? w.model : DEFAULT_MODEL;
     out.push({
       projectPath: w.projectPath,
       model,
@@ -149,6 +148,15 @@ export function startWikiAutoScheduler(db: Db = getDb(), log?: Logger): NodeJS.T
     const candidates = selectAutoWikiCandidates(db, Date.now(), cfg);
     if (candidates.length === 0) return;
     const target = candidates[0];
+    // The machine-wide fold lock is shared with the SessionEnd hook's
+    // brain-update process — if a hook fold is running, skip this tick (the
+    // candidate is picked up again next tick). Bounds cost; data would be safe
+    // either way (watermark).
+    const lock = acquireFoldLock();
+    if (!lock) {
+      log?.info({ projectPath: target.projectPath }, "auto wiki tick skipped — fold lock held");
+      return;
+    }
     inFlight = true;
     try {
       const r = await generateProjectWiki(target.projectPath, target.model, db);
@@ -162,10 +170,16 @@ export function startWikiAutoScheduler(db: Db = getDb(), log?: Logger): NodeJS.T
       if (refreshed.length > 0) {
         log?.info({ projectPath: target.projectPath, refreshed }, "auto derived layers refreshed");
       }
+      // Keep an already-exported Obsidian vault in sync with the fresh brain.
+      const vault = await reExportVaultIfExists(target.projectPath, db);
+      if (vault.exported) {
+        log?.info({ projectPath: target.projectPath, files: vault.files }, "auto vault re-exported");
+      }
     } catch (err) {
       log?.error({ err, projectPath: target.projectPath }, "auto wiki update failed");
     } finally {
       inFlight = false;
+      lock.release();
     }
   };
 

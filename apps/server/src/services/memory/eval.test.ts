@@ -112,9 +112,9 @@ describe("eval score history", () => {
 
   it("appends one history point per eval run, oldest→newest", async () => {
     vi.mocked(callClaude).mockResolvedValue(JSON.stringify({ score: 60, summary: "", issues: [] }));
-    await generateEval("/p", "claude-opus-4-8", db);
+    await generateEval("/p", "opus", db);
     vi.mocked(callClaude).mockResolvedValue(JSON.stringify({ score: 85, summary: "", issues: [] }));
-    await generateEval("/p", "claude-opus-4-8", db);
+    await generateEval("/p", "opus", db);
 
     const hist = getEvalHistory("/p", db);
     expect(hist.map((h) => h.score)).toEqual([60, 85]); // chart order

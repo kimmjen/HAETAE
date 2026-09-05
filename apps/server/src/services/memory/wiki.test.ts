@@ -215,6 +215,53 @@ describe("buildPrompt — audit findings feed back into the incremental wiki", (
   });
 });
 
+describe("buildPrompt — 확장 스켈레톤 + 디테일 규칙 (#384)", () => {
+  const sel = [msg(0, "a", "hello", "user")];
+
+  it("스켈레톤에 아키텍처/트러블슈팅 섹션이 있다 (부트스트랩/증분 모두)", () => {
+    for (const wiki of ["", "# Existing wiki"]) {
+      const p = buildPrompt("proj", wiki, sel, 1);
+      expect(p).toContain("## 아키텍처 / Architecture");
+      expect(p).toContain("## 트러블슈팅 이력 / Troubleshooting");
+    }
+  });
+
+  it("구체 식별자 보존 규칙이 양쪽 경로에 들어간다", () => {
+    for (const wiki of ["", "# Existing wiki"]) {
+      const p = buildPrompt("proj", wiki, sel, 1);
+      expect(p).toMatch(/issue\/PR numbers/i);
+      expect(p).toMatch(/symptom .+ root cause .+ fix/i);
+    }
+  });
+
+  it("증분 경로에는 anti-erosion + 누락 섹션 재구성 규칙이 있다", () => {
+    const p = buildPrompt("proj", "# Existing wiki", sel, 1);
+    expect(p).toMatch(/specificity/i);
+    expect(p).toMatch(/missing from the current wiki/i);
+  });
+});
+
+describe("buildPrompt — 외부 소스 블록 (#390)", () => {
+  const sel = [msg(0, "a", "hello", "user")];
+  const sources = "[E1] 논문 A (https://ex.com/a)\n외부 주장 본문";
+
+  it("소스가 있으면 EXTERNAL SOURCES 블록 + 출처 명시 규칙이 양쪽 경로에 들어간다", () => {
+    for (const wiki of ["", "# Existing wiki"]) {
+      const p = buildPrompt("proj", wiki, sel, 1, "", "", undefined, sources);
+      expect(p).toContain("EXTERNAL SOURCES");
+      expect(p).toContain("외부 주장 본문");
+      expect(p).toMatch(/attributed inline/i);
+    }
+  });
+
+  it("소스가 없으면 블록도 규칙도 없다 (무회귀)", () => {
+    for (const wiki of ["", "# Existing wiki"]) {
+      const p = buildPrompt("proj", wiki, sel, 1);
+      expect(p).not.toContain("EXTERNAL SOURCES");
+    }
+  });
+});
+
 describe("isDegenerateWikiOutput — 파괴적 합성 결과 거부", () => {
   const good = "# P\n\n## 개요\n" + "실제 내용 ".repeat(50);
 

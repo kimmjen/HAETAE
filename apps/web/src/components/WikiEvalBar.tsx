@@ -102,7 +102,7 @@ export function WikiEvalBar({ projectPath }: { projectPath: string }) {
         <button
           type="button"
           disabled={generate.isPending}
-          onClick={() => generate.mutate({ projectPath, model: "claude-opus-4-7" })}
+          onClick={() => generate.mutate({ projectPath, model: "opus" })}
           className="ml-auto inline-flex items-center gap-1 text-[9px] font-mono text-text-muted hover:text-text-main transition-colors disabled:opacity-50"
         >
           <RefreshCw size={9} className={generate.isPending ? "animate-spin" : ""} />

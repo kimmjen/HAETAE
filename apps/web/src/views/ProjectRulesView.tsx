@@ -5,7 +5,9 @@ import { RulesView } from "@/views/RulesView";
 import { useProjects } from "@/hooks/useProjects";
 import { ProjectSessionsList } from "@/components/ProjectSessionsList";
 import { ProjectMemoryList } from "@/components/ProjectMemoryList";
+import { BuildBrainPanel } from "@/components/BuildBrainPanel";
 import { ProjectWikiPanel } from "@/components/ProjectWikiPanel";
+import { ProjectTopicsPanel } from "@/components/ProjectTopicsPanel";
 import { ProjectQAPanel } from "@/components/ProjectQAPanel";
 import { cn } from "@/lib/utils";
 
@@ -104,7 +106,11 @@ export function ProjectRulesView({ slug, selectedPath, onSelect }: ProjectRulesV
       )}
 
       {tab === "wiki" && (
-        <ProjectWikiPanel projectPath={project.absolutePath} />
+        <div className="space-y-3">
+          <BuildBrainPanel projectPath={project.absolutePath} />
+          <ProjectWikiPanel projectPath={project.absolutePath} />
+          <ProjectTopicsPanel projectPath={project.absolutePath} />
+        </div>
       )}
 
       {tab === "ask" && (

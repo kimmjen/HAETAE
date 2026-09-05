@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost } from "@/lib/api-client";
+import type { WikiModel } from "@/lib/models";
 
 export interface VoiceProfile {
   content: string;
@@ -19,7 +20,7 @@ export function useVoice() {
 export function useGenerateVoice() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ model }: { model: string }) => apiPost<VoiceProfile>("/api/voice/generate", { model }),
+    mutationFn: ({ model }: { model: WikiModel }) => apiPost<VoiceProfile>("/api/voice/generate", { model }),
     onSuccess: (data) => qc.setQueryData(["voice"], { profile: data }),
   });
 }

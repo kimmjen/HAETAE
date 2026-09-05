@@ -145,7 +145,7 @@ describe("selectRelevantNotesSemantic", () => {
   it("seeds from the LLM-selected slugs (meaning, not keyword) then expands wikilinks", async () => {
     vi.mocked(callClaude).mockResolvedValue('{"slugs": ["oauth"]}');
     // "인증" never appears literally in the notes — keyword seeding would miss it.
-    const out = await selectRelevantNotesSemantic(notes, "인증은 어떻게 처리해?", "claude-opus-4-8");
+    const out = await selectRelevantNotesSemantic(notes, "인증은 어떻게 처리해?", "opus");
     const slugs = out.map((s) => s.note.slug);
     expect(slugs).toContain("oauth"); // LLM-picked seed
     expect(slugs).toContain("keychain"); // pulled in via [[keychain]] wikilink
@@ -155,12 +155,12 @@ describe("selectRelevantNotesSemantic", () => {
 
   it("returns empty when the model selects nothing (caller falls back)", async () => {
     vi.mocked(callClaude).mockResolvedValue('{"slugs": []}');
-    expect(await selectRelevantNotesSemantic(notes, "관계없는 질문", "claude-opus-4-8")).toEqual([]);
+    expect(await selectRelevantNotesSemantic(notes, "관계없는 질문", "opus")).toEqual([]);
   });
 
   it("passes the note index (titles) to the model", async () => {
     vi.mocked(callClaude).mockResolvedValue('{"slugs": []}');
-    await selectRelevantNotesSemantic(notes, "q", "claude-opus-4-8");
+    await selectRelevantNotesSemantic(notes, "q", "opus");
     const prompt = vi.mocked(callClaude).mock.calls[0][0] as string;
     expect(prompt).toContain("[oauth] OAuth 한도 조회");
     expect(prompt).toContain("q");
@@ -186,14 +186,14 @@ describe("cross-project (global) recall", () => {
 
   it("returns the agent-picked notes across projects, in rank order", async () => {
     vi.mocked(callClaude).mockResolvedValue('{"slugs": ["Alpha/grid", "HAETAE/oauth", "ghost/x"]}');
-    const out = await selectRelevantNotesGlobal(globals, "주파수와 인증?", "claude-opus-4-8");
+    const out = await selectRelevantNotesGlobal(globals, "주파수와 인증?", "opus");
     expect(out.map((g) => `${g.projectName}/${g.note.slug}`)).toEqual(["Alpha/grid", "HAETAE/oauth"]);
   });
 
   it("empty selection / empty corpus → []", async () => {
     vi.mocked(callClaude).mockResolvedValue('{"slugs": []}');
-    expect(await selectRelevantNotesGlobal(globals, "무관", "claude-opus-4-8")).toEqual([]);
-    expect(await selectRelevantNotesGlobal([], "q", "claude-opus-4-8")).toEqual([]);
+    expect(await selectRelevantNotesGlobal(globals, "무관", "opus")).toEqual([]);
+    expect(await selectRelevantNotesGlobal([], "q", "opus")).toEqual([]);
   });
 });
 

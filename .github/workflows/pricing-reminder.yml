@@ -1,0 +1,61 @@
+name: pricing-table-monthly-check
+
+# 매월 1회 GitHub 이슈를 자동 생성해 `pricing.ts` 의 단가를 Anthropic 공식
+# 페이지와 대조하라고 메인테이너에게 알림. fetch + 자동 갱신이 아니라
+# 사람이 확인하는 reminder 방식 — Anthropic HTML scrape 가 깨질 비용보다
+# 한 달 한 번 직접 확인이 단순하고 안전 (#167 본문 method #4).
+#
+# schedule 이벤트는 default branch(=main) 의 워크플로우 파일에서만
+# 발사되므로 본 파일은 dev 가 아닌 main 에만 존재.
+
+on:
+  schedule:
+    # 매월 1일 09:00 UTC == 18:00 KST. 메인테이너 한국 시간대 퇴근 전
+    # 슬랙/메일 알림으로 자연스럽게 노출되는 시간대.
+    - cron: "0 9 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read PRICING_AS_OF
+        id: pricing
+        run: |
+          asof=$(grep '^export const PRICING_AS_OF' apps/server/src/services/usage/pricing.ts | sed -E 's/.*"([^"]+)".*/\1/')
+          if [ -z "$asof" ]; then
+            echo "PRICING_AS_OF stamp not found — pricing.ts shape changed?" >&2
+            exit 1
+          fi
+          echo "asof=$asof" >> "$GITHUB_OUTPUT"
+
+      - name: Open reminder issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const asof = '${{ steps.pricing.outputs.asof }}';
+            const today = new Date().toISOString().slice(0, 10);
+            const title = `chore: 가격표 갱신 점검 (stamp ${asof})`;
+            const body = [
+              `\`apps/server/src/services/usage/pricing.ts\` 의 \`PRICING_AS_OF\` 가 **${asof}**.`,
+              ``,
+              `자동 알림 — 월 1회 발사. https://www.anthropic.com/pricing 와 대조해주세요.`,
+              ``,
+              `**변동 없음**: 본 이슈를 닫고, 선택적으로 \`PRICING_AS_OF\` 를 \`${today}\` 로 갱신하는 PR 만 올려도 됩니다.`,
+              ``,
+              `**변동 있음**: \`PRICING\` 의 단가 + \`PRICING_AS_OF=${today}\` 로 PR. \`pricing.test.ts\` 가 단가를 lock 하고 있어 같이 갱신 필요.`,
+              ``,
+              `자동 생성: \`.github/workflows/pricing-reminder.yml\` · 메커니즘 결정: #167`,
+            ].join('\n');
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+            });

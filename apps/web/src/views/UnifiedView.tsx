@@ -3,12 +3,7 @@ import { useState } from "react";
 import { ArrowRight, KeyRound } from "lucide-react";
 import { useMoney } from "@/lib/currency";
 import { useApiUnified } from "@/hooks/useUsageApi";
-
-const PERIODS = [
-  { label: "7d", days: 7 },
-  { label: "30d", days: 30 },
-  { label: "90d", days: 90 },
-] as const;
+import { PeriodToggle, Kpi } from "@/components/UsageChrome";
 
 /**
  * Phase 5 — Unified view. Joins per-day Local cost (jsonl-derived
@@ -100,70 +95,6 @@ function NoKeyView() {
           <span>See setup instructions on the API Cost page</span>
           <ArrowRight size={12} />
         </Link>
-      </div>
-    </div>
-  );
-}
-
-function PeriodToggle({
-  days,
-  onChange,
-}: {
-  days: number;
-  onChange: (n: number) => void;
-}) {
-  return (
-    <div className="inline-flex border border-border-main">
-      {PERIODS.map((p) => {
-        const active = p.days === days;
-        return (
-          <button
-            key={p.days}
-            type="button"
-            onClick={() => onChange(p.days)}
-            className={
-              active
-                ? "px-2 py-1 text-[10px] font-bold uppercase bg-accent text-text-on-accent"
-                : "px-2 py-1 text-[10px] font-bold uppercase bg-bg-primary text-text-main hover:bg-bg-hover transition-colors"
-            }
-          >
-            {p.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function Kpi({
-  label,
-  value,
-  accent,
-  tone = "neutral",
-  precise,
-}: {
-  label: string;
-  value: string;
-  accent?: boolean;
-  tone?: "neutral" | "warn";
-  precise?: string;
-}) {
-  const valueClass =
-    tone === "warn"
-      ? "text-warning"
-      : accent
-        ? "text-accent"
-        : "text-text-main";
-  return (
-    <div className="border border-border-subtle bg-bg-secondary p-3 min-w-0">
-      <div className="text-[9px] font-bold uppercase tracking-widest text-text-muted truncate">
-        {label}
-      </div>
-      <div
-        title={precise}
-        className={`text-[18px] font-black ${valueClass} mt-1 tabular-nums truncate`}
-      >
-        {value}
       </div>
     </div>
   );

@@ -136,7 +136,7 @@ haetae/
 
 - **Unofficial endpoint — opt-in only** · The "real utilization %" in Rolling Windows directly hits `https://api.anthropic.com/api/oauth/usage`, the same private endpoint Claude CLI uses internally. **Off by default**; you must add `HAETAE_USE_OAUTH_LIMITS=true` to `apps/server/.env.local` and restart the server. If Anthropic changes the schema it breaks silently and falls back to the user-defined thresholds. Background: [`docs/research/claude-code-data-sources.md`](./docs/research/claude-code-data-sources.md) (Korean).
 - **OAuth limits source** · The opt-in real-utilization fetch reads Claude's OAuth credentials per-OS — macOS via Keychain (`security` CLI), Linux/Windows via the `~/.claude/.credentials.json` file (`$CLAUDE_CONFIG_DIR` aware) (#166). Absent / logged out → falls back to user thresholds.
-- **Hard-coded pricing** · Rates in `services/usage/pricing.ts` are pinned to the 2026-05-03 snapshot. The footer surfaces the `PRICING: <date>` stamp so the staleness is visible; updates land via PRs. Auto-fetch is tracked in [`docs/decisions/pending.md`](./docs/decisions/pending.md).
+- **Hard-coded pricing** · Rates in `services/usage/pricing.ts` are pinned to the 2026-09-06 snapshot. The footer surfaces the `PRICING: <date>` stamp so the staleness is visible; updates land via PRs. Auto-fetch is tracked in [`docs/decisions/pending.md`](./docs/decisions/pending.md).
 - **Single-user, no external exposure** · No auth / multi-user / external hosting story. Assumes a single user on the same machine.
 
 Long-term risks / the Tauri decision: see [`docs/decisions/pending.md`](./docs/decisions/pending.md).

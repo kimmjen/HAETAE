@@ -97,6 +97,17 @@ CLI 가 없거나 미로그인이면 위 기능들은 graceful 하게 빈 상태
 5. **비용 감시** — Overview(1) 롤링 윈도우(5h/24h/7d/월), Local Usage(2) 모델·프로젝트별 분해와 캐시 인사이트, Settings 에서 일/월 비용 임계치 알림.
 6. **터미널** — Terminal 에서 `claude` 를 바로. 프로젝트 페이지의 *Continue* 버튼은 그 프로젝트 cwd 로 터미널을 열고 `claude --continue` 를 자동 입력한다.
 
+## 토큰 비용 (Token cost)
+
+두뇌 기능(위키 합성·노트·온톨로지·eval·토픽 페이지·회상)은 전부 로컬의 `claude` CLI 를 `claude --print` 서브프로세스로 호출한다 — 즉 **네 CLI 로그인 계정의 quota 를 쓴다** (구독이든 API 키든). 사용량 시각화·세션 열람·검색 등 나머지 기능은 LLM 을 호출하지 않으니 비용 0.
+
+비용을 통제하는 레버:
+
+- **기본 모델 = Sonnet.** 모든 생성은 기본적으로 `--model sonnet` 으로 나간다 (품질 대비 비용 균형). 각 패널의 모델 셀렉터에서 **Opus**(최고 품질) 또는 **Haiku**(최저 비용)로 콜마다 바꿀 수 있다. 버전을 핀하지 않고 CLI 티어 별칭을 쓰므로 새 세대가 나와도 자동으로 최신 모델을 탄다.
+- **기본은 전부 수동.** 위키·노트·온톨로지 등은 버튼을 눌러야 생성된다. 자동 갱신은 **명시적 opt-in** 일 때만: `HAETAE_WIKI_AUTO=true`(백그라운드 스케줄러) 또는 SessionEnd 훅(`apps/server/scripts/session-end-fold.sh`) 설치. 둘 다 안 하면 백그라운드 LLM 콜 0.
+- **가장 무거운 콜은 위키 합성** — 기존 위키 전체 + 최대 80k 자 델타를 매번 재작성한다. 노트·온톨로지·eval·토픽은 각각 별도 콜. 세션 종료 fold 를 켠 경우 `HAETAE_SESSION_FOLD_MIN_DELTA`(기본 30) 로 fold 빈도를 조절한다.
+- **실제 지출 확인** — 이렇게 발생한 비용도 Overview / Local Usage 에 그대로 집계된다 (같은 `~/.claude` JSONL).
+
 ## 레이아웃
 
 ```
@@ -136,7 +147,7 @@ haetae/
 
 - **비공식 endpoint — opt-in only** · Rolling Windows 의 \"진짜 한도 %\" 는 Claude CLI 가 내부적으로 쓰는 `https://api.anthropic.com/api/oauth/usage` 를 직접 호출. **기본 비활성**, `apps/server/.env.local` 에 `HAETAE_USE_OAUTH_LIMITS=true` 명시 후 서버 재시작해야 켜짐. Anthropic 이 schema 바꾸면 무음으로 깨지고 자동으로 사용자 임계치 fallback. 자세한 근거: [`docs/research/claude-code-data-sources.md`](./docs/research/claude-code-data-sources.md).
 - **OAuth 한도 소스** · opt-in 진짜 한도 fetch 는 Claude OAuth 자격증명을 OS별로 읽음 — macOS 는 Keychain (`security` CLI), Linux/Windows 는 `~/.claude/.credentials.json` 파일(`$CLAUDE_CONFIG_DIR` 인식) (#166). 없거나 미로그인이면 사용자 임계치 (#141 / #153) 로 fallback.
-- **가격표 hard-coded** · `services/usage/pricing.ts` 의 단가는 2026-05-03 기준 박제. footer 의 `PRICING: <date>` 가 현재 기준 stamp 로 노출되며, 변동 시 PR 로 직접 갱신해야 함. 자동 fetch 는 [`docs/decisions/pending.md`](./docs/decisions/pending.md) 의 미정 항목.
+- **가격표 hard-coded** · `services/usage/pricing.ts` 의 단가는 2026-09-06 기준 박제. footer 의 `PRICING: <date>` 가 현재 기준 stamp 로 노출되며, 변동 시 PR 로 직접 갱신해야 함. 자동 fetch 는 [`docs/decisions/pending.md`](./docs/decisions/pending.md) 의 미정 항목.
 - **CI / 자동화 0** · 현재 `pnpm lint && pnpm test` 는 사용자 한 명의 규율로 돌아가는 중. PR 머지 전 GitHub Actions 같은 게이트 없음.
 - **단일 사용자 / 외부 노출 미고려** · 인증 / 멀티유저 / 외부 host 일체 안 다룸. 같은 머신의 단일 사용자만 가정.
 

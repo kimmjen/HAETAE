@@ -2,7 +2,7 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Fingerprint, RefreshCw, FileCode, AlertTriangle } from "lucide-react";
 import { useVoice, useGenerateVoice, useInjectVoice } from "@/hooks/useVoice";
-import { MODELS, shortModel } from "@/lib/models";
+import { DEFAULT_MODEL, MODELS, shortModel, type WikiModel } from "@/lib/models";
 import dayjs from "@/lib/dayjs";
 
 /**
@@ -14,7 +14,7 @@ export function VoiceView() {
   const voiceQ = useVoice();
   const generate = useGenerateVoice();
   const inject = useInjectVoice();
-  const [model, setModel] = useState("claude-opus-4-7");
+  const [model, setModel] = useState<WikiModel>(DEFAULT_MODEL);
 
   const profile = voiceQ.data?.profile ?? null;
 
@@ -35,7 +35,7 @@ export function VoiceView() {
         <div className="ml-auto flex items-center gap-2">
           <select
             value={model}
-            onChange={(e) => setModel(e.target.value)}
+            onChange={(e) => setModel(e.target.value as WikiModel)}
             disabled={generate.isPending}
             className="bg-bg-primary border border-border-main text-[9px] font-mono text-text-main px-1.5 py-0.5 focus:outline-none disabled:opacity-50"
           >

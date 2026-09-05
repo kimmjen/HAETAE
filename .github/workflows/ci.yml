@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    # Run on every PR regardless of base — catches breakage early.
+
+# Conserve runner minutes: cancel old runs when a PR is force-pushed.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-test:
+    name: lint + test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # macOS = primary dev platform (keychain features).
+        # Ubuntu = catch cross-platform bugs (path separators, fs casing).
+        # Windows postponed: node-pty native build is finicky there — see
+        # docs/decisions/pending.md if/when Tauri / Windows support lands.
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read tool versions
+        id: tools
+        run: |
+          NODE=$(grep '^nodejs' .tool-versions | awk '{print $2}')
+          PNPM=$(grep '^pnpm'   .tool-versions | awk '{print $2}')
+          PYTHON=$(grep '^python' .tool-versions | awk '{print $2}')
+          echo "node=$NODE" >> "$GITHUB_OUTPUT"
+          echo "pnpm=$PNPM" >> "$GITHUB_OUTPUT"
+          echo "python=$PYTHON" >> "$GITHUB_OUTPUT"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ steps.tools.outputs.pnpm }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.tools.outputs.node }}
+          cache: pnpm
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ steps.tools.outputs.python }}
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # apps/notebooklm (FastAPI, ADR 0010) — its `test` script runs
+      # ./.venv/bin/pytest, so the venv must exist before `pnpm test`.
+      - name: Set up apps/notebooklm venv
+        run: |
+          python -m venv apps/notebooklm/.venv
+          apps/notebooklm/.venv/bin/pip install --quiet --upgrade pip
+          apps/notebooklm/.venv/bin/pip install --quiet -e "apps/notebooklm[dev]"
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Test
+        run: pnpm test

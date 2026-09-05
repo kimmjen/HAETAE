@@ -7,7 +7,7 @@ import { getDb, type Db } from "../../db";
 import { usageEvents, usageFileCursor, sessionMessages } from "../../db/schema";
 import { getClaudeHome } from "../claude-fs/path";
 import { discoverProjects } from "../projects/discover";
-import { calculateCost } from "./pricing";
+import { calculateCost, toMicroUsd } from "./pricing";
 import {
   decodeProjectDir,
   parseLine,
@@ -31,14 +31,6 @@ function buildEncodedToAbsoluteMap(roots: string[]): Map<string, string> {
   const m = new Map<string, string>();
   for (const r of roots) m.set(r.replace(/\//g, "-"), r);
   return m;
-}
-
-/**
- * Convert a UsageEvent's cost (USD) to integer micro-USD for storage.
- * SQLite never sees floats this way — sums and aggregations stay exact.
- */
-function toMicroUsd(usd: number): number {
-  return Math.round(usd * 1_000_000);
 }
 
 export interface IndexFileResult {

@@ -1,20 +1,14 @@
-import { useFormContext } from "react-hook-form";
 import { assembleFile } from "@/lib/skill-template";
-import type { WizardData } from "../schema";
+import { useWizardForm } from "../form";
 
 export function BodyStep() {
-  const {
-    register,
-    watch,
-    formState: { errors },
-  } = useFormContext<WizardData>();
+  const { values, errors, setField } = useWizardForm();
 
-  const all = watch();
   const preview = assembleFile({
-    name: all.name || "untitled",
-    description: all.description || "",
-    options: all.options,
-    body: all.body || "",
+    name: values.name || "untitled",
+    description: values.description || "",
+    options: values.options,
+    body: values.body || "",
   });
 
   return (
@@ -24,14 +18,15 @@ export function BodyStep() {
           Body (markdown)
         </label>
         <textarea
-          {...register("body")}
+          value={values.body}
+          onChange={(e) => setField("body", e.target.value)}
           rows={18}
           spellCheck={false}
           placeholder="# Heading&#10;&#10;Write the body in markdown."
           className="w-full bg-bg-secondary text-text-main border border-border-main px-3 py-2 text-[12px] font-mono leading-relaxed focus:bg-bg-primary focus:outline-none focus:ring-1 focus:ring-accent placeholder:text-text-subtle resize-y"
         />
         {errors.body && (
-          <p className="text-[10px] font-mono text-danger">{errors.body.message}</p>
+          <p className="text-[10px] font-mono text-danger">{errors.body}</p>
         )}
       </div>
       <div className="p-6 space-y-2 bg-bg-elevated">

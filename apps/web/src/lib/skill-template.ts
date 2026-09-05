@@ -48,18 +48,3 @@ function yamlString(value: string): string {
 export function buildSkillPath(directory: string, name: string): string {
   return `${directory}/${name}.md`;
 }
-
-const NAME_PATTERN = /^[a-z0-9_-]+$/;
-
-export function sanitizeSkillName(input: string): string {
-  return input
-    .trim()
-    .toLowerCase()
-    .replace(/\.md$/, "")
-    .replace(/[^a-z0-9_-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-export function isValidSkillName(name: string): boolean {
-  return NAME_PATTERN.test(name);
-}

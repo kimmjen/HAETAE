@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { getDb, type Db } from "../../db";
 import { sessionMessages, projectWiki, projectEval, projectEvalHistory, userProfile } from "../../db/schema";
-import { callClaude, extractJson, type ClaudeModel } from "./claude-cli";
+import { callClaude, extractJson, DEFAULT_MODEL, type ClaudeModel } from "./claude-cli";
 import { isDerivedStale, getWikiGeneratedAt } from "./staleness";
 
 const SAMPLE_BUDGET = 40_000; // chars of recent conversation sampled for the audit
@@ -139,7 +139,7 @@ export function getEval(projectPath: string, db: Db = getDb()): EvalResult | nul
 /** Audit a project's wiki against its conversations + the user's voice. */
 export async function generateEval(
   projectPath: string,
-  model: ClaudeModel = "claude-opus-4-8",
+  model: ClaudeModel = DEFAULT_MODEL,
   db: Db = getDb(),
 ): Promise<EvalResult> {
   const wiki = db

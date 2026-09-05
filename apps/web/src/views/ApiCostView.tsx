@@ -15,12 +15,7 @@ import {
   useApiSummary,
   useRefreshApi,
 } from "@/hooks/useUsageApi";
-
-const PERIODS = [
-  { label: "7d", days: 7 },
-  { label: "30d", days: 30 },
-  { label: "90d", days: 90 },
-] as const;
+import { PeriodToggle, Kpi, SectionLabel } from "@/components/UsageChrome";
 
 /**
  * Phase 5 — Anthropic Admin API view. Mirrors `LocalUsageView`'s
@@ -199,76 +194,6 @@ function NoKeyView() {
           page's jsonl-based estimate is effectively the full picture — cache hit ratio, model breakdown, time-of-day, etc. all still apply.
         </div>
       </div>
-    </div>
-  );
-}
-
-function PeriodToggle({
-  days,
-  onChange,
-}: {
-  days: number;
-  onChange: (n: number) => void;
-}) {
-  return (
-    <div className="inline-flex border border-border-main">
-      {PERIODS.map((p) => {
-        const active = p.days === days;
-        return (
-          <button
-            key={p.days}
-            type="button"
-            onClick={() => onChange(p.days)}
-            className={
-              active
-                ? "px-2 py-1 text-[10px] font-bold uppercase bg-accent text-text-on-accent"
-                : "px-2 py-1 text-[10px] font-bold uppercase bg-bg-primary text-text-main hover:bg-bg-hover transition-colors"
-            }
-          >
-            {p.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function Kpi({
-  label,
-  value,
-  accent,
-  precise,
-}: {
-  label: string;
-  value: string;
-  accent?: boolean;
-  precise?: string;
-}) {
-  return (
-    <div className="border border-border-subtle bg-bg-secondary p-3 min-w-0">
-      <div className="text-[9px] font-bold uppercase tracking-widest text-text-muted truncate">
-        {label}
-      </div>
-      <div
-        title={precise}
-        className={
-          accent
-            ? "text-[18px] font-black text-accent mt-1 tabular-nums truncate"
-            : "text-[18px] font-black text-text-main mt-1 tabular-nums truncate"
-        }
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function SectionLabel({ children, className }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div
-      className={`text-[10px] font-bold uppercase tracking-widest text-text-muted mb-2 ${className ?? ""}`}
-    >
-      {children}
     </div>
   );
 }
