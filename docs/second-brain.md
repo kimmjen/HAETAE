@@ -4,8 +4,10 @@ HAETAE의 북극성: **"AI를 위한 세컨드 브레인"**. Claude Code 대화�
 정제하고, 스스로 신선·정확하게 유지하며, 다음 세션의 AI가 *맥락 재설명 없이* 그
 지식을 갖고 시작하게 한다. 단순 저장이 아니라 **기억을 가진 AI**.
 
-서비스는 전부 `apps/server/src/services/memory/`. LLM 호출은 `claude --print`
-(`claude-cli.ts`, `MAX_CONCURRENT` 큐). API는 `routes/project-wiki.ts`·`routes/voice.ts`.
+서비스는 대부분 `apps/server/src/services/memory/`(예외: 대화 전체검색은 인덱서 쪽
+`services/usage/session-search.ts`). LLM 호출은 전부 `claude --print`
+(`claude-cli.ts` — 모델 allowlist·`MAX_CONCURRENT` 큐를 쥔 단일 게이트웨이).
+API는 `routes/project-wiki.ts`·`routes/voice.ts`·`routes/brain.ts`.
 
 ## 파이프라인 (5축)
 
@@ -15,12 +17,13 @@ HAETAE의 북극성: **"AI를 위한 세컨드 브레인"**. Claude Code 대화�
 
 | 축 | 무엇 | 핵심 파일 |
 |---|---|---|
-| **Capture** | 위키(증분 정합) · 원자 노트(제텔카스텐) · 타입 온톨로지 · 노트↔개념 링크 · compact memories · voice 프로필 | `wiki.ts` `notes.ts` `ontology.ts` `links.ts` `materialize.ts` `voice.ts` |
-| **Maintain** | 자동 갱신 스케줄러 → 파생물 cascade 재생성 → eval 자가감사 → eval→위키 자기교정 → staleness 표시 | `auto-wiki.ts` `cascade.ts` `eval.ts` `staleness.ts` |
-| **Recall** | 의미 기반 회상(질문→관련 노트), Q&A(출처표기), 그래프 의미 검색, **cross-project 전역 회상** | `recall.ts` `ask.ts` `recall-global.ts` |
+| **Capture** | 위키(증분 정합) · 원자 노트(제텔카스텐) · 타입 온톨로지 · 노트↔개념 링크 · 토픽 페이지 · compact memories · voice 프로필 · 외부 소스(URL) 흡수 | `wiki.ts` `notes.ts` `ontology.ts` `links.ts` `topics.ts` `materialize.ts` `voice.ts` `external-sources.ts` |
+| **Maintain** | 자동 갱신 스케줄러 → 파생물 cascade 재생성 → eval 자가감사 → eval→위키 자기교정 → staleness 표시 · 위키 버전 스냅샷/롤백 · fold 동시성 잠금 | `auto-wiki.ts` `cascade.ts` `eval.ts` `staleness.ts` `wiki-history.ts` `fold-lock.ts` |
+| **Recall** | 의미 기반 회상(질문→관련 노트), Q&A(출처표기), 그래프 의미 검색, **cross-project 전역 회상**, 전 프로젝트 카탈로그·대화 FTS5 검색 | `recall.ts` `ask.ts` `recall-global.ts` `brain-index.ts` `usage/session-search.ts` |
 | **Persist** | `.claude/CLAUDE.md`에 위키+기억 인덱스 주입(신뢰도 표기) · 전역 `~/.claude/CLAUDE.md`에 voice · MCP recall 툴 | `inject-wiki.ts` `voice.ts` `mcp/` |
 | **Visualize** | 옵시디언식 라이브 그래프(노트/온톨로지/통합/전역/세션) | `graph.ts`, web `GraphCanvas.tsx` |
 | **Own** | 두뇌를 마크다운 볼트로 export(옵시디언 소유) | `vault.ts` |
+| **Unify** | 전 프로젝트를 가로지르는 **전역 두뇌** — 통합 위키·토픽·eval 을 별도 레이어로 합성 | `global-brain.ts` |
 
 > **Phase 7 — 통합 두뇌 웹 표면**: 위 레이어들을 *모든 프로젝트에 걸쳐* 한 화면에 노출(임베딩 0,
 > 같은 인덱스+`claude --print` 원칙). `brain-index.ts`(전 프로젝트 위키·노트·개념 카탈로그,
@@ -91,8 +94,11 @@ Anthropic 메모리 툴 just-in-time / Karpathy index)과 일치하는 균형:
 
 파생 레이어는 프로젝트당 JSON-blob 1행(`project_wiki`는 증분, 나머지는 전량 재생성):
 `project_wiki`(+`project_wiki_history`) · `project_notes` · `project_ontology` ·
-`project_links` · `project_eval`(+`project_eval_history`) · `user_profile`(voice, 전역) ·
-`memories`(compact 요약) · `session_messages`(JSONL 인덱서 소스).
+`project_links` · `project_topics` · `project_eval`(+`project_eval_history`).
+
+프로젝트 경계 밖: `global_wiki` · `global_topics` · `global_eval`(전역 두뇌) ·
+`user_profile`(voice) · `external_sources`(URL 흡수분의 provenance) ·
+`memories`(compact 요약) · `session_messages`(JSONL 인덱서 소스, 회상·FTS5 검색의 원본).
 
 > 알려진 부채: 노트·온톨로지·링크·eval은 *전량* 재생성(위키만 증분). 그 주된 피해인
 > **식별자 churn**(regen마다 새 slug/id → 볼트 파일·그래프 노드·링크 깨짐)은 완화됨 —

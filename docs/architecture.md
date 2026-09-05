@@ -7,7 +7,8 @@ haetae/
 ├── apps/
 │   ├── web/                       # Vite + React UI (port 5173)
 │   ├── server/                    # Fastify backend (port 3001)
-│   └── notebooklm/                # NotebookLM 사이드카 (FastAPI, port 4100, ADR 0010)
+│   ├── notebooklm/                # NotebookLM 사이드카 (FastAPI, port 4100, ADR 0010)
+│   └── desktop/                   # Tauri 셸 (ADR 0012) — v1 은 dev 래퍼
 ├── docs/                          # 본 문서
 ├── scripts/
 │   └── bootstrap.sh               # 새 머신 setup
@@ -17,7 +18,10 @@ haetae/
 └── README.md
 ```
 
-`packages/shared` (공유 타입) 는 도입 후 필요 시.
+`packages/shared` (공유 타입) 는 도입 후 필요 시. 웹이 서버 모듈을 import 할 수
+없어 생기는 소수의 미러(예: 모델 목록 `apps/web/src/lib/models.ts` ↔
+`services/memory/claude-cli.ts`)는 공유 패키지 대신 **드리프트를 잡는 테스트**로
+묶어둔다 — 서버 테스트가 웹 파일을 읽어 목록이 갈리면 실패한다.
 
 ## 실행 모델
 
@@ -64,6 +68,30 @@ haetae/
 라우트는 얇게, 비즈니스 로직은 `services/` 에 집약. 서버 언어가 바뀌어도 `services/` 만 다시 짜면 되도록.
 
 **2차 뇌 + Phase 7**: `services/memory/*`(위키·노트·온톨로지·eval·voice·recall·그래프)와 그 cross-project 표면(`/api/brain/{index,search,recall}` — Phase 7 통합 두뇌 뷰)은 임베딩 없이 같은 `claude --print` 경로를 공유한다 — 상세는 [second-brain.md](./second-brain.md). NotebookLM 연동은 `/py/*` → 별도 FastAPI 사이드카(`apps/notebooklm`, ADR 0010)로 빠지며, 자체 Python SQLite 미러를 둔다.
+
+## 서버 서브시스템
+
+라우트 파일별 담당 영역과 그 뒤의 저장소. 새 기여자가 "이 기능은 어디를 고쳐야
+하나"를 여기서 찾는다.
+
+| 영역 | 라우트 | 저장소 |
+|---|---|---|
+| usage (로컬 JSONL 인덱서) | `/api/usage/local/*` | `usage_events`, `usage_file_cursor`, `session_messages` |
+| usage-api (Anthropic Admin) | `/api/usage/api/*` | `usage_api_events` |
+| claude-fs (룰·스킬·CLAUDE.md) | `/api/rules`, `/api/claude-md` | FS(`~/.claude`) + `file_backups` |
+| projects / system | `/api/projects*`, `/api/system/*` | `project_roots` + `claude` CLI 프로브 |
+| pty (통합 터미널) | `/ws/terminal` | PTY 메모리 (영속 없음) |
+| memory (2차 뇌) | `/api/wiki/*`, `/api/voice/*`, `/api/memories` | `project_{wiki,notes,ontology,links,eval,topics}`, `*_history`, `user_profile`, `memories`, `external_sources` |
+| brain (Phase 7 + 전역) | `/api/brain/{index,search,recall}`, `/api/brain/global/*` | 위 테이블 조회 + FTS5 + `global_{wiki,topics,eval}` |
+| NotebookLM 사이드카 | `/py/notebooklm/*` (FastAPI :4100) | 별도 Python SQLite |
+
+**비용 정밀도**: `usage_events.cost_usd_micro` 는 정수 micro-USD(USD × 1e6). SQLite
+가 float 를 보지 않으므로 합계·집계가 정확하다. UI 경계에서만 1e6 으로 나눈다.
+
+비용은 **인덱싱 시점에 굳는다** — 인덱서는 `(session_id, message_id)` UNIQUE 로
+멱등이라 기존 행을 다시 보지 않는다. 따라서 `services/usage/pricing.ts` 의 단가를
+고쳐도 과거 집계는 그대로다. 저장된 토큰으로 제자리 재계산하려면
+`pnpm --filter haetae-server reprice`(기본 dry run, `--apply` 로 기록).
 
 ## 사용자 데이터 위치
 
