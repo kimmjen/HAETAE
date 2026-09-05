@@ -1,6 +1,6 @@
 [project]
 name = "haetae-notebooklm"
-version = "0.1.0"
+version = "0.2.0"
 description = "HAETAE NotebookLM service — FastAPI wrapper over notebooklm-py (ADR 0010)"
 requires-python = ">=3.12"
 dependencies = [
