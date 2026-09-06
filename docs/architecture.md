@@ -29,6 +29,37 @@ haetae/
 - web 의 `/api/*` 는 server 로, `/py/*` 는 notebooklm 사이드카로 프록시 (dev: Vite proxy / prod: Fastify)
 - 단일 패키지 실행: `pnpm --filter haetae-web dev` 또는 `pnpm --filter haetae-server dev`
 
+### 백그라운드 루프 — 무엇이 언제 도는가
+
+서버 프로세스 안에서 도는 것과, 서버와 무관하게 도는 것이 갈린다. **HAETAE 를
+상주시킬 필요가 있는지**가 여기서 갈리므로 셋을 구분해 둔다.
+
+| 루프 | 주기 | 서버 필요 | 기본값 |
+|---|---|---|---|
+| 사용량 인덱서 | 부팅 시 1회 + 30초 (`HAETAE_INDEXER_INTERVAL_MS`) | **필요** | 켜짐 (`0` 이면 주기 tick 없이 부팅 1회만) |
+| 위키 자동 갱신 | 5분 스캔 · 10분 정착 디바운스 · 프로젝트당 30분 쿨다운 | **필요** | **꺼짐** — `HAETAE_WIKI_AUTO=true` opt-in |
+| SessionEnd fold | Claude Code 세션이 끝날 때마다 | **불필요** | 훅을 설치했을 때만 |
+
+**서버를 상주시키지 않으면** 무슨 일이 생기나:
+
+- **사용량** — 아무것도 잃지 않는다. 인덱서는 파일별 커서로 증분이라, 다음에 앱을 열면 그동안 쌓인 JSONL 을 부팅 시 한 번에 따라잡는다. 손실이 아니라 지연이다.
+- **두뇌** — 자동 갱신 스케줄러는 서버 안에 살므로 같이 멈춘다. 대신 **SessionEnd 훅**(`apps/server/scripts/session-end-fold.sh`)이 이 경우를 위해 있다: 세션이 끝나면 detached 백그라운드로 `update-brain` 을 띄워 접는다 — 상주 서버 없이 두뇌가 최신을 유지한다. 훅도 스케줄러도 없으면 위키는 버튼을 눌러야 갱신된다(그게 기본값이다).
+
+둘 다 Claude quota 를 쓰므로 기본이 꺼져 있다. 훅 쪽 빈도는
+`HAETAE_SESSION_FOLD_MIN_DELTA`(기본 30개 메시지)와
+`HAETAE_SESSION_FOLD_COOLDOWN_MS`(기본 20분)로 조인다.
+
+### 상주 실행 (데몬)
+
+**전용 데몬은 없다.** launchd·systemd 유닛을 제공하지 않으므로, 항상 켜두고 싶으면
+`pnpm start`(프로덕션 단일 origin, :3001)를 각자 OS 의 서비스 매니저에 직접
+등록해야 한다. 앱으로 감싸는 방향(Tauri)은 [ADR 0012](./decisions/0012-tauri-desktop.md)
+이고 v1 은 `tauri dev` 래퍼까지다 — 번들 standalone 은 미정이라, 그때까지는
+`pnpm start` 를 등록하는 쪽이 유일한 상주 경로다.
+
+대부분의 경우 상주는 필요 없다. 앱을 열 때 따라잡고, 두뇌는 SessionEnd 훅으로
+충분하다.
+
 ## 보안 원칙
 
 | 항목 | 정책 |

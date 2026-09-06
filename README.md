@@ -147,12 +147,21 @@ haetae/
 
 **Prod 모드 접속**: `http://127.0.0.1:3001` — server 가 web 빌드 + API 모두 처리 (단일 포트).
 
+### 계속 켜둬야 하나
+
+**대체로 아니오.** 쓸 때만 띄우면 됩니다.
+
+- **사용량** — 서버가 꺼져 있는 동안 쌓인 JSONL 은 다음에 앱을 열 때 부팅 인덱서가 한 번에 따라잡습니다 (파일별 커서 증분). 잃는 건 없고 늦을 뿐입니다.
+- **두뇌** — 자동 갱신 스케줄러(`HAETAE_WIKI_AUTO=true`)는 서버 안에 살아서 같이 멈춥니다. 상주 없이 두뇌를 최신으로 두려면 **SessionEnd 훅**(`apps/server/scripts/session-end-fold.sh`)을 쓰세요 — Claude Code 세션이 끝날 때 백그라운드로 접습니다.
+
+정말 상주시키려면 `pnpm start` 를 각자 OS 의 서비스 매니저(launchd/systemd)에 직접 등록해야 합니다 — **전용 데몬 유닛은 제공하지 않습니다.** 상세는 [docs/architecture.md](./docs/architecture.md#백그라운드-루프--무엇이-언제-도는가).
+
 ## 알려진 한계
 
 - **비공식 endpoint — opt-in only** · Rolling Windows 의 \"진짜 한도 %\" 는 Claude CLI 가 내부적으로 쓰는 `https://api.anthropic.com/api/oauth/usage` 를 직접 호출. **기본 비활성**, `apps/server/.env.local` 에 `HAETAE_USE_OAUTH_LIMITS=true` 명시 후 서버 재시작해야 켜짐. Anthropic 이 schema 바꾸면 무음으로 깨지고 자동으로 사용자 임계치 fallback. 자세한 근거: [`docs/research/claude-code-data-sources.md`](./docs/research/claude-code-data-sources.md).
 - **OAuth 한도 소스** · opt-in 진짜 한도 fetch 는 Claude OAuth 자격증명을 OS별로 읽음 — macOS 는 Keychain (`security` CLI), Linux/Windows 는 `~/.claude/.credentials.json` 파일(`$CLAUDE_CONFIG_DIR` 인식) (#166). 없거나 미로그인이면 사용자 임계치 (#141 / #153) 로 fallback.
 - **가격표 hard-coded** · `services/usage/pricing.ts` 의 단가는 2026-09-06 기준 박제. footer 의 `PRICING: <date>` 가 현재 기준 stamp 로 노출되며, 변동 시 PR 로 직접 갱신해야 함. 자동 fetch 는 [`docs/decisions/pending.md`](./docs/decisions/pending.md) 의 미정 항목.
-- **CI / 자동화 0** · 현재 `pnpm lint && pnpm test` 는 사용자 한 명의 규율로 돌아가는 중. PR 머지 전 GitHub Actions 같은 게이트 없음.
+- **CI 범위가 좁음** · GitHub Actions 가 모든 PR 에 `pnpm lint` + `pnpm test` 를 ubuntu·macOS 두 러너에서 돌린다. 다만 **`pnpm build` 와 E2E 는 CI 밖** — 빌드 확인은 사람이, 브라우저 E2E 는 아예 없다 (Playwright/Cypress 도입은 [`docs/decisions/pending.md`](./docs/decisions/pending.md) 의 미정 항목). Windows 러너도 없다 (위 지원 OS 참고).
 - **단일 사용자 / 외부 노출 미고려** · 인증 / 멀티유저 / 외부 host 일체 안 다룸. 같은 머신의 단일 사용자만 가정.
 
 장기 위험 / Tauri 결정 등은 [`docs/decisions/pending.md`](./docs/decisions/pending.md).
