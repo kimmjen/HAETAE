@@ -276,7 +276,13 @@ export const projectWiki = sqliteTable(
     generatedAt: integer("generated_at").notNull(),
     /** Short summary / title line for the project (first h1 or first sentence). */
     summary: text("summary"),
-    /** Model used for last generation, e.g. 'claude-opus-4-7'. */
+    /** Model that produced the current content. Since #404 this is a CLI tier
+        alias ('sonnet' / 'opus' / 'haiku'); rows written before it carry pinned
+        ids like 'claude-opus-4-7', which the UI still renders through
+        `shortModel()`. The default below is vestigial — both insert sites in
+        `services/memory/wiki.ts` always pass `model`, and SQLite cannot ALTER a
+        column default without rebuilding the table, so retiring it would cost a
+        full-table migration for a value nothing reads. */
     model: text("model").notNull().default("claude-opus-4-7"),
     createdAt: integer("created_at", { mode: "timestamp_ms" })
       .notNull()
