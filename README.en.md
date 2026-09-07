@@ -136,6 +136,21 @@ haetae/
 
 **Prod mode**: open `http://127.0.0.1:3001` — server handles both the web bundle and the API.
 
+### When the port is taken
+
+3001 is a common default for other dev servers (Next.js among them), so if one is already up, the Haetae server fails to bind. One env var moves it, and **the Vite proxy reads the same variable — nothing to change on the web side**:
+
+```bash
+HAETAE_SERVER_PORT=3011 pnpm dev
+```
+
+| Variable | Default | Moves |
+|---|---|---|
+| `HAETAE_SERVER_PORT` | `3001` | Fastify server + Vite's `/api` and `/ws` proxy targets |
+| `HAETAE_NOTEBOOKLM_PORT` | `4100` | Python sidecar + the `/py` proxy target |
+
+Web's `5173` is pinned with `strictPort` in `vite.config.ts`, so a taken port fails outright rather than sliding to the next one. To move it: `pnpm --filter haetae-web dev -- --port <n>`.
+
 ### Does it need to stay running?
 
 **Mostly no.** Start it when you want it.

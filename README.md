@@ -147,6 +147,21 @@ haetae/
 
 **Prod 모드 접속**: `http://127.0.0.1:3001` — server 가 web 빌드 + API 모두 처리 (단일 포트).
 
+### 포트가 겹칠 때
+
+3001 은 Next.js 를 비롯한 다른 개발 서버가 흔히 쓰는 포트라, 그쪽이 먼저 떠 있으면 HAETAE 서버가 바인딩에 실패합니다. 환경변수 하나로 옮기면 되고, **Vite 프록시가 같은 변수를 읽으므로 web 쪽은 따로 손댈 필요가 없습니다**:
+
+```bash
+HAETAE_SERVER_PORT=3011 pnpm dev
+```
+
+| 변수 | 기본값 | 옮기는 대상 |
+|---|---|---|
+| `HAETAE_SERVER_PORT` | `3001` | Fastify 서버 + Vite 의 `/api`·`/ws` 프록시 타깃 |
+| `HAETAE_NOTEBOOKLM_PORT` | `4100` | Python 사이드카 + `/py` 프록시 타깃 |
+
+web 의 `5173` 은 `vite.config.ts` 에 `strictPort` 로 고정돼 있어, 점유되면 다른 포트로 미끄러지지 않고 그대로 실패합니다. 옮기려면 `pnpm --filter haetae-web dev -- --port <n>`.
+
 ### 계속 켜둬야 하나
 
 **대체로 아니오.** 쓸 때만 띄우면 됩니다.

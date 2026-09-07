@@ -4,7 +4,7 @@
   "private": true,
   "description": "FastAPI service wrapping notebooklm-py (ADR 0010). Python app; package.json exists only so pnpm/concurrently can launch it.",
   "scripts": {
-    "dev": "./.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 4100 --reload",
+    "dev": "./.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port ${HAETAE_NOTEBOOKLM_PORT:-4100} --reload",
     "start": "./.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 4100",
     "test": "./.venv/bin/pytest -q"
   }

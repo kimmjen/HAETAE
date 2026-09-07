@@ -139,14 +139,15 @@ export function BuildBrainPanel({ projectPath }: BuildBrainPanelProps) {
         </div>
 
         <div className="ml-auto flex items-center gap-2">
-          {/* Optional single-model override; empty = keep the tiered defaults. */}
+          {/* Optional single-model override; empty = each layer's own default
+              from LAYER_MODEL (all on the default tier today). */}
           <select
             value={override ?? ""}
             onChange={(e) => setOverride(e.target.value === "" ? null : (e.target.value as WikiModel))}
             disabled={running}
             className="bg-bg-primary border border-border-main text-[9px] font-mono text-text-main px-1.5 py-0.5 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <option value="">Tiered (Opus / Sonnet)</option>
+            <option value="">Per-layer default</option>
             {WIKI_MODELS.map((m) => (
               <option key={m.value} value={m.value}>
                 All: {m.label}
