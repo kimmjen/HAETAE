@@ -109,7 +109,7 @@ pnpm dev
 
 - **기본 모델 = Sonnet.** 모든 생성은 기본적으로 `--model sonnet` 으로 나간다 (품질 대비 비용 균형). 각 패널의 모델 셀렉터에서 **Opus**(최고 품질) 또는 **Haiku**(최저 비용)로 콜마다 바꿀 수 있다. 버전을 핀하지 않고 CLI 티어 별칭을 쓰므로 새 세대가 나와도 자동으로 최신 모델을 탄다.
 - **기본은 전부 수동.** 위키·노트·온톨로지 등은 버튼을 눌러야 생성된다. 자동 갱신은 **명시적 opt-in** 일 때만: `HAETAE_WIKI_AUTO=true`(백그라운드 스케줄러) 또는 SessionEnd 훅(`apps/server/scripts/session-end-fold.sh`) 설치. 둘 다 안 하면 백그라운드 LLM 콜 0.
-- **가장 무거운 콜은 위키 합성** — 기존 위키 전체 + 최대 80k 자 델타를 매번 재작성한다. 노트·온톨로지·eval·토픽은 각각 별도 콜. 세션 종료 fold 를 켠 경우 `HAETAE_SESSION_FOLD_MIN_DELTA`(기본 30) 로 fold 빈도를 조절한다.
+- **가장 무거운 콜은 위키 합성** — 기존 위키 전체 + 최대 80k 자 델타를 매번 재작성한다. 위키가 갱신되면 낡아진 파생 레이어(노트·온톨로지·링크·토픽·eval)를 cascade 가 이어서 재생성하는데, 각 1콜이지만 **토픽만 계획 1콜 + 페이지당 1콜**이라 전체가 최대 ~8콜까지 간다. 이미 만들어 둔 레이어에만 해당하고, 자동 경로(`HAETAE_WIKI_AUTO` 또는 SessionEnd 훅)를 켰을 때만 돈다. 세션 종료 fold 를 켠 경우 `HAETAE_SESSION_FOLD_MIN_DELTA`(기본 30) 로 fold 빈도를 조절한다.
 - **실제 지출 확인** — 이렇게 발생한 비용도 Overview / Local Usage 에 그대로 집계된다 (같은 `~/.claude` JSONL).
 
 ## 레이아웃

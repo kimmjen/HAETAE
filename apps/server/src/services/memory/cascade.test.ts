@@ -1,6 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { closeDb, openDb, runMigrations, type Db } from "../../db";
-import { projectWiki, projectNotes, projectOntology, projectEval } from "../../db/schema";
+import {
+  projectWiki,
+  projectNotes,
+  projectOntology,
+  projectEval,
+  projectLinks,
+  projectTopics,
+} from "../../db/schema";
 import { callClaude } from "./claude-cli";
 import { getNotes } from "./notes";
 import { getOntology } from "./ontology";
@@ -9,7 +16,7 @@ import { selectStaleDerived, cascadeStaleDerived } from "./cascade";
 
 // callClaude is the only subprocess boundary — mock it so the cascade runs the
 // real generators (and the real staleness recompute) against an in-memory DB
-// without spawning `claude --print`. One payload satisfies all three parsers.
+// without spawning `claude --print`. One payload satisfies every layer's parser.
 vi.mock("./claude-cli", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./claude-cli")>();
   return { ...actual, callClaude: vi.fn() };
@@ -22,6 +29,10 @@ const PAYLOAD = JSON.stringify({
   ],
   concepts: [{ id: "c1", label: "C1", kind: "decision" }],
   relations: [],
+  // getLinks / getTopics read these keys off the stored row unguarded, so a
+  // payload missing them throws on read rather than returning null.
+  links: [],
+  topics: [],
   score: 80,
   summary: "ok",
   issues: [],
@@ -58,6 +69,16 @@ describe("cascade — auto-regenerate stale derived layers", () => {
       .insert(projectEval)
       .values({ projectPath: "/p", content: PAYLOAD, score: 50, model: "claude-opus-4-7", generatedAt })
       .run();
+  const insertLinks = (generatedAt: number) =>
+    db
+      .insert(projectLinks)
+      .values({ projectPath: "/p", content: PAYLOAD, model: "claude-opus-4-7", generatedAt })
+      .run();
+  const insertTopics = (generatedAt: number) =>
+    db
+      .insert(projectTopics)
+      .values({ projectPath: "/p", content: PAYLOAD, model: "claude-opus-4-7", generatedAt })
+      .run();
 
   describe("selectStaleDerived", () => {
     it("위키보다 오래됐고 이미 존재하는 레이어만 고른다", () => {
@@ -71,6 +92,23 @@ describe("cascade — auto-regenerate stale derived layers", () => {
     it("파생물이 없으면 빈 배열 — 부트스트랩하지 않는다", () => {
       insertWiki(2000);
       expect(selectStaleDerived("/p", db)).toEqual([]);
+    });
+
+    it("links·topics 도 낡으면 고른다 — UI가 배지를 띄우는 레이어 전부", () => {
+      insertWiki(2000);
+      insertNotes(1000);
+      insertOntology(1000);
+      insertLinks(1000);
+      insertTopics(1000);
+      insertEval(1000);
+      // links 는 notes·ontology 를 읽으므로 그 뒤, eval 은 감사라 맨 끝.
+      expect(selectStaleDerived("/p", db)).toEqual([
+        "notes",
+        "ontology",
+        "links",
+        "topics",
+        "eval",
+      ]);
     });
   });
 
