@@ -1,6 +1,6 @@
 # 현재 상태
 
-마지막 갱신: 2026-06-09 (Post-Phase 6 — 세컨드 브레인 축 + Tauri 데스크톱. 상세: [second-brain.md](./second-brain.md))
+마지막 갱신: 2026-09-08 (v0.2.0 릴리스 — 영문 UI · 전역 두뇌 · 가격 정확성. 상세: [second-brain.md](./second-brain.md))
 
 ## 머지된 PR
 
@@ -269,15 +269,38 @@ Rolling Windows 패널 (5h / 24h / 7d / 이번 달)                       Done  
 | auth-status | `GET /py/notebooklm/auth-status` — 라이브 프로브로 ok/no_auth/expired/error + resolved login 명령 | #323 |
 | Settings 섹션 | 인증 상태 배지 + 통합 터미널 autoCommand 재인증 + 동기화 | #323 |
 
+## v0.2.0 — 릴리스 (2026-09-08)
+
+상태: **완료**. 공개 레포 `kimmjen/HAETAE` 에 `v0.1.0` → `v0.2.0` 반영, OSS 체크리스트
+(P0/P1/P2) 전부 닫힘. 전체 항목은 [CHANGELOG](../CHANGELOG.md).
+
+| 축 | 산출물 | PR |
+|---|---|---|
+| i18n | 앱 UI 전면 영문화 + dayjs 로케일 정정 | #376 #378 #380 |
+| 두뇌 | 전역 cross-project 두뇌 · 토픽 페이지 · 외부 소스(URL) 흡수 · 노트 근거 세션 인용 | #385 #386 #387 #389 #391 |
+| 볼트 | 온톨로지·링크·토픽 포함 + 자동 재export | #400 #402 |
+| 모델 | 핀된 id 사본 3벌 → CLI 티어 별칭 정본 하나 (드리프트는 테스트가 잡음) | #404 |
+| 비용 | Sonnet 5 단가 반영(티어 단위 매칭) + `reprice` — 실제 DB 31% 과다 계상 해소 | #405 |
+| 문서 | 서버 서브시스템 지도 공개화 · 지원 OS · 설치 마찰 · 운영 기대치 | #407 #408 #409 |
+| 실행 | `/run-haetae` 스킬 — 앱을 띄워 Playwright 로 구동 | #412 |
+| 수정 | BUILD BRAIN 라벨 · NotebookLM 포트 env · cascade 가 links·topics 를 빠뜨리던 것 | #410 #413 |
+
+**앱을 띄워야만 보이던 것**: #410 · #413 은 `lint`·`test`·`build` 가 **전부 그린인
+상태에서** 살아 있었다. UI 를 건드린 PR 은 드라이버로 화면까지 확인할 것.
+
 ## 미확정 결정
 
 | 결정 | 시점 |
 |---|---|
+| 파생 레이어 증분화 | "위키 델타 → 노트 델타" 매핑 설계 합의 후 (식별자 churn 재발 위험) |
 | Tauri 패키징 (P6.3) | 일상 사용 패턴 확정 후 |
+| `dev` 브랜치 처리 | 2026-07-13 이후 정지·main 과 분기. 공개가 archive 추출로 대체돼 역할 상실 |
 | ESLint / Biome 도입 | 코드베이스 확장 시 |
-| GitHub Actions CI | 외부 협업 발생 시 |
-| Playwright / Cypress E2E | Tauri 결정과 묶임 |
+| Playwright / Cypress E2E | 현재 `/run-haetae` 드라이버가 스모크만 담당. 정식 E2E 는 Tauri 결정과 묶임 |
 | 빌드 산출물 영속 실행 (launchd / systemd) | 일상 사용 패턴 정립 시 |
-| 가격 테이블 자동 갱신 | Anthropic 가격 변동 잦아지면 |
+| 가격 테이블 자동 갱신 | Anthropic 가격 변동 잦아지면 (수동 갱신 시 `reprice` 동반 필수) |
+
+> GitHub Actions CI 는 더 이상 미확정이 아니다 — 모든 PR 을 ubuntu·macOS 에서
+> `lint`+`test` 로 게이트하고 있다(`build`·E2E 는 CI 밖).
 
 상세는 [pending decisions](./decisions/pending.md).
