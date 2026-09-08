@@ -8,7 +8,7 @@ import { getEval, generateEval } from "./eval";
 
 /**
  * Closes the self-improving loop one step further than auto-wiki: once the wiki
- * is regenerated its derived layers (atomic notes / ontology / eval) go stale —
+ * is regenerated its derived layers (notes / ontology / links / topics / eval) go stale —
  * the staleness badges flip on. This cascade regenerates them automatically so
  * the badge moves from "낡음 표시" to "스스로 고침".
  *

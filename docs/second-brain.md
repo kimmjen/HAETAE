@@ -56,7 +56,7 @@ API는 `routes/project-wiki.ts`·`routes/voice.ts`·`routes/brain.ts`.
         → eval 점수 추이로 신뢰가 실제로 오르는지 관측
 ```
 
-- **스케줄러**(`auto-wiki.ts`): opt-in `HAETAE_WIKI_AUTO=true`. 기존 위키만·settle 디바운스·프로젝트별 쿨다운·single-flight. 위키 갱신 후 `cascade.ts`가 *이미 존재하고 낡아진* 파생물만 재생성(부트스트랩 안 함). 대상은 UI가 낡음 배지를 띄우는 다섯 레이어 전부 — 노트·온톨로지·링크·토픽·eval. 링크는 노트·온톨로지를 읽으므로 그 뒤, eval은 결과를 감사하므로 맨 끝이다. 비용은 레이어당 1콜이지만 **토픽만 계획 1콜 + 페이지당 1콜**(≤`MAX_TOPICS_PER_RUN`)이라 전체 cascade가 최대 ~8콜까지 간다.
+- **스케줄러**(`auto-wiki.ts`): opt-in `HAETAE_WIKI_AUTO=true`. 기존 위키만·settle 디바운스·프로젝트별 쿨다운·single-flight. 위키 갱신 후 `cascade.ts`가 *이미 존재하고 낡아진* 파생물만 재생성(부트스트랩 안 함). 대상은 **프로젝트** 파생 레이어 다섯 — 노트·온톨로지·링크·토픽·eval. (전역 두뇌 `global_*`도 낡음 배지를 띄우지만 cascade 대상이 아니다. 프로젝트 위키 전체를 다시 읽는 무거운 합성이라 의도적으로 버튼 전용이다.) 링크는 노트·온톨로지를 읽으므로 그 뒤, eval은 결과를 감사하므로 맨 끝이다. 비용은 레이어당 1콜이지만 **토픽만 계획 1콜 + 페이지당 1콜**(≤`MAX_TOPICS_PER_RUN`)이라 전체 cascade가 최대 ~8콜까지 간다.
 - **자기교정**(`wiki.ts` + `eval.ts evalCorrectionHints`): incremental 위키 재생성 시 최신 eval의 high/medium accuracy·gap·staleness 이슈를 `AUDIT FINDINGS`로 주입. "근거 있을 때만 고치고 지어내지 말 것"(보수적). 주관적 vibe·low 제외.
 - **staleness**(`staleness.ts`): 파생물 generatedAt < 위키 generatedAt이면 낡음 → UI 배지.
 - **관측성**: `project_eval_history`에 매 eval 점수 적재 → WikiEvalBar 추이 스파크라인. 루프가 천장(파생레이어 더 쌓아도 점수 안 오름)을 쳤는지 판단 근거.

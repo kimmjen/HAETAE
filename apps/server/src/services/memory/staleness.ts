@@ -3,9 +3,14 @@ import { getDb, type Db } from "../../db";
 import { projectWiki } from "../../db/schema";
 
 /**
- * A derived layer (notes / ontology / eval) is stale when the wiki it was
- * distilled from has since been regenerated — i.e. the wiki's generatedAt is
- * newer than the derived layer's. Unknown wiki time (null) → not stale.
+ * A derived layer (notes / ontology / links / topics / eval) is stale when the
+ * wiki it was distilled from has since been regenerated — i.e. the wiki's
+ * generatedAt is newer than the derived layer's. Unknown wiki time (null) →
+ * not stale.
+ *
+ * Layer-agnostic on purpose: it compares two timestamps and knows no layer
+ * names, so adding a layer needs no edit here — only `cascade.ts` enumerates
+ * them, and that list is what went out of sync before.
  */
 export function isDerivedStale(derivedGeneratedAt: number, wikiGeneratedAt: number | null): boolean {
   return wikiGeneratedAt !== null && wikiGeneratedAt > derivedGeneratedAt;
