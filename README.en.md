@@ -149,7 +149,7 @@ HAETAE_SERVER_PORT=3011 pnpm dev
 | `HAETAE_SERVER_PORT` | `3001` | Fastify server + Vite's `/api` and `/ws` proxy targets |
 | `HAETAE_NOTEBOOKLM_PORT` | `4100` | Python sidecar + the `/py` proxy target |
 
-Web's `5173` is pinned with `strictPort` in `vite.config.ts`, so a taken port fails outright rather than sliding to the next one. To move it: `pnpm --filter haetae-web dev -- --port <n>`.
+Web's `5173` is pinned with `strictPort` in `vite.config.ts`, so a taken port fails outright rather than sliding to the next one. To move it: `pnpm --filter haetae-web dev --port <n>` — with a `--` in between, the flag reaches Vite as a literal argument, gets ignored, and Vite stays on 5173.
 
 ### Does it need to stay running?
 

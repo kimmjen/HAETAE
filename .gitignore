@@ -41,6 +41,14 @@ coverage/
 
 # Claude Code per-project state — should never be committed.
 # settings.local.json accumulates absolute paths and bash permission rules
-# that are specific to the developer's machine.
-.claude/
+# that are specific to the developer's machine, and CLAUDE.md here is the
+# auto-generated wiki injection. Skills are the exception — run-haetae ships
+# the driver a contributor needs, so it belongs in the repo.
+.claude/*
+!.claude/skills/
 .haetae/
+
+# Python bytecode. apps/notebooklm has its own rule, but the run-haetae skill
+# ships a driver.py outside that scope.
+__pycache__/
+*.py[cod]

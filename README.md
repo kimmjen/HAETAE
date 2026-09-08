@@ -160,7 +160,7 @@ HAETAE_SERVER_PORT=3011 pnpm dev
 | `HAETAE_SERVER_PORT` | `3001` | Fastify 서버 + Vite 의 `/api`·`/ws` 프록시 타깃 |
 | `HAETAE_NOTEBOOKLM_PORT` | `4100` | Python 사이드카 + `/py` 프록시 타깃 |
 
-web 의 `5173` 은 `vite.config.ts` 에 `strictPort` 로 고정돼 있어, 점유되면 다른 포트로 미끄러지지 않고 그대로 실패합니다. 옮기려면 `pnpm --filter haetae-web dev -- --port <n>`.
+web 의 `5173` 은 `vite.config.ts` 에 `strictPort` 로 고정돼 있어, 점유되면 다른 포트로 미끄러지지 않고 그대로 실패합니다. 옮기려면 `pnpm --filter haetae-web dev --port <n>` — `--` 를 끼우면 Vite 에 리터럴로 전달돼 플래그가 무시되고 5173 에 그대로 뜹니다.
 
 ### 계속 켜둬야 하나
 
